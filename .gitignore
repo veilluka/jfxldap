@@ -1,0 +1,15 @@
+
+
+.gradle/
+build/
+*.class
+*.log
+*.settings.xml
+
+# IDEA
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
+

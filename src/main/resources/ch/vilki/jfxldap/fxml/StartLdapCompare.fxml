@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.Tooltip?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="TOP_CENTER" minHeight="-Infinity" minWidth="860.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.StartLdapCompareController">
+   <children>
+      <HBox />
+      <HBox />
+      <GridPane VBox.vgrow="ALWAYS">
+        <columnConstraints>
+          <ColumnConstraints hgrow="SOMETIMES" maxWidth="1.7976931348623157E308" minWidth="10.0" prefWidth="83.0" />
+          <ColumnConstraints hgrow="ALWAYS" maxWidth="1.7976931348623157E308" minWidth="10.0" prefWidth="660.0" />
+        </columnConstraints>
+        <rowConstraints>
+          <RowConstraints minHeight="10.0" prefHeight="30.0" />
+          <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+        </rowConstraints>
+         <children>
+            <Label alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="SOURCE DN">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Label>
+            <TextField fx:id="_textFieldSelectedSourceDN" editable="false" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" />
+            <Label alignment="CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" minWidth="65.0" text="TARGET DN" GridPane.rowIndex="1">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+            </Label>
+            <TextField fx:id="_textFieldTargetDN" editable="false" maxWidth="1.7976931348623157E308" GridPane.columnIndex="1" GridPane.rowIndex="1" />
+         </children>
+         <VBox.margin>
+            <Insets right="2.0" />
+         </VBox.margin>
+      </GridPane>
+      <Separator prefHeight="10.0" prefWidth="743.0" />
+      <HBox alignment="CENTER_LEFT" maxWidth="1.7976931348623157E308">
+         <children>
+            <Label alignment="CENTER" contentDisplay="CENTER" text="Select Target">
+               <HBox.margin>
+                  <Insets left="5.0" right="5.0" />
+               </HBox.margin>
+               <font>
+                  <Font size="10.0" />
+               </font>
+            </Label>
+            <ChoiceBox fx:id="_choiceBoxTargetConnection" maxWidth="1.7976931348623157E308" minWidth="120.0">
+               <HBox.margin>
+                  <Insets right="5.0" />
+               </HBox.margin></ChoiceBox>
+            <CheckBox fx:id="_checkBoxIgnoreOperationalAttributes" layoutX="364.0" layoutY="17.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" selected="true" text="Ignore op. Attributes" wrapText="true" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font size="10.0" />
+               </font>
+               <HBox.margin>
+                  <Insets left="5.0" />
+               </HBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="_checkBoxIgnoreMissingEntries" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Ignore missing entry" wrapText="true" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font size="10.0" />
+               </font>
+               <HBox.margin>
+                  <Insets left="20.0" />
+               </HBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="_checkBoxShowAllEntries" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Show all entries" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font size="10.0" />
+               </font>
+               <HBox.margin>
+                  <Insets left="3.0" />
+               </HBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="_checkBoxIgnoreWhiteSpace" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Ignore white space" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font size="10.0" />
+               </font>
+               <HBox.margin>
+                  <Insets left="3.0" />
+               </HBox.margin>
+            </CheckBox>
+            <CheckBox fx:id="_checkBoxSubtree" maxWidth="1.7976931348623157E308" mnemonicParsing="false" selected="true" text="Subtree" HBox.hgrow="ALWAYS">
+               <font>
+                  <Font size="10.0" />
+               </font>
+            </CheckBox>
+         </children>
+         <VBox.margin>
+            <Insets bottom="2.0" left="2.0" right="2.0" top="2.0" />
+         </VBox.margin>
+      </HBox>
+      <Separator prefHeight="10.0" prefWidth="737.0" />
+      <HBox alignment="CENTER" VBox.vgrow="ALWAYS" />
+      <fx:include fx:id="embeddedFilterView" source="FilterWindow.fxml" />
+      <Separator prefHeight="13.0" prefWidth="743.0" />
+      <HBox alignment="CENTER_RIGHT" prefHeight="70.0">
+         <children>
+            <Button fx:id="_buttonCancel" mnemonicParsing="false" prefHeight="40.0" prefWidth="153.0" text="CANCEL">
+               <HBox.margin>
+                  <Insets right="20.0" />
+               </HBox.margin>
+               <tooltip>
+                  <Tooltip text="hallo ich bin ein tooltip" />
+               </tooltip>
+            </Button>
+            <Button fx:id="_buttonRunCompare" minWidth="50.0" mnemonicParsing="false" prefHeight="40.0" prefWidth="153.0" text="Run Compare">
+               <font>
+                  <Font name="System Bold" size="12.0" />
+               </font>
+               <HBox.margin>
+                  <Insets right="20.0" />
+               </HBox.margin>
+            </Button>
+         </children>
+      </HBox>
+   </children>
+</VBox>

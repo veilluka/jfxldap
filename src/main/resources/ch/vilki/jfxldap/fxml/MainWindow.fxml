@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.layout.BorderPane?>
+
+<BorderPane fx:id="_mainWindow" prefHeight="494.0" prefWidth="757.0" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.Controller">
+   <top>
+      <MenuBar fx:id="_menuBar" BorderPane.alignment="CENTER">
+        <menus>
+          <Menu mnemonicParsing="false" text="File">
+            <items>
+              <MenuItem fx:id="newTab" mnemonicParsing="false" text="New Tab" />
+                  <MenuItem fx:id="_newProject" mnemonicParsing="false" text="New Project" />
+                  <MenuItem fx:id="_openProject" mnemonicParsing="false" text="Open Project" />
+                  <MenuItem fx:id="_saveProject" mnemonicParsing="false" text="Save Project" />
+                  <MenuItem fx:id="_closeProject" mnemonicParsing="false" text="Close Project" />
+                  <MenuItem fx:id="_changeMasterPassword" mnemonicParsing="false" text="Change Master Password" />
+                  <MenuItem fx:id="_settings" mnemonicParsing="false" text="Settings" />
+                  <MenuItem fx:id="_keyStore" mnemonicParsing="false" text="KeyStore" />
+                  <MenuItem fx:id="_exit" mnemonicParsing="false" text="Close" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Edit">
+            <items>
+              <MenuItem mnemonicParsing="false" text="Edit" />
+            </items>
+          </Menu>
+          <Menu mnemonicParsing="false" text="Help">
+            <items>
+              <MenuItem mnemonicParsing="false" text="About" />
+            </items>
+          </Menu>
+        </menus>
+      </MenuBar>
+   </top>
+   <center>
+      <SplitPane fx:id="_mainPane" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER" />
+   </center>
+</BorderPane>
