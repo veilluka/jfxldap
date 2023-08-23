@@ -1,0 +1,183 @@
+= FxLDAP
+Vedran Bauer
+v1.35 2020-03-01
+github https://github.com/veilluka/fxLdap
+
+
+== Introduction
+
+
+Implementation of LDAP Client with JavaFX.
+It is the result of two requirements, which the other ldap browsers did not support,
+and which I needed during my daily work.
+It was not intended to be a replacement for some other LDAP clients, but it did grow over time.
+
+Used:
+
+ * https://github.com/RobertBColton/DockFX/blob/master/src/main/java/org/dockfx/DockPane.java[dockfx] to build
+GUI with docked windows.
+*  secured-properties
+
+
+
+== FEATURES
+
+
+=== LDAP Compare
+
+You can compare two instances of LDAP Tree in real time. This is something
+I use very often to compare production and integration enviroment or any other enviroments.
+Or you can export the LDAP tree in a file and compare them.
+It is possible to copy entries from source to target or only some values.
+
+* Compare LDAP instances online
+* Compare LDAP files
+* Copy entries src to target online
+* Copy entries file src to target
+* Export entries and compare with some external program (like beyond compare)
+
+=== LDAP Text Search
+
+Very often I have to search for some text in subtree without knowing in which attribute the text
+is stored. Or sometimes the whole content of the attribute is stored in base64, for example a content of
+xml File is stored in some attribute like this.
+
+[source,xml]
+----
+<xml>
+<user>admin</user>
+<server>main_server</server>
+</xml>
+
+----
+This is stored as base64 in LDAP and search would give no result if you search for "main_server".
+
+* Search plain text in LDAP tree or file
+* replace plain text in entry or subtree
+
+
+
+== Quick Start
+
+*After starting the program for the first time you must define master password.*
+
+image::dok/resources/images/qs1.png[qs1]
+
+CAUTION: The length of the password must correspond to the local JAVA security settings.
+It can be problematic from 16 characters.
+Standard JAVA Cryptopolicy only allows a certain key size. Otherwise adjust the file
+`JAVA_HOME/lib/security/java.security`. Remove comment at `crypto.policy=unlimited`.
+
+image::dok/resources/images/qs2.png[qs2]
+
+*Open settings and define a connection first.*
+
+image::dok/resources/images/qs3.png[qs3]
+
+*This connection can be selected in main window to connect to the server.*
+
+image::dok/resources/images/qs4.png[qs4]
+
+*Select the connection and connect*
+
+image::dok/resources/images/qs5.png[qs5]
+
+*select the tree you want to search in and press the right mouse button*
+
+image::dok/resources/images/qs6.png[qs6]
+
+*click on search*
+
+image::dok/resources/images/qs7.png[qs7]
+
+*enter the text you want to search for*
+
+You can exclude attributes you do not want to search in (ignore)
+or select only attributes you want to search in (compare).
+If filter is disabled, it will search in all attributes.
+
+*click on search button*
+
+image::dok/resources/images/qs8.png[qs8]
+
+*Search window will appear with search results*
+
+This icon shows entries where text has been found
+
+image::src/main/resources/icons/Alert.png[found]
+
+image::dok/resources/images/qs9.png[qs9]
+
+*select entry, in entry view the attribute where the value is found is marked red*
+
+image::dok/resources/images/qs10.png[qs10]
+
+* you can now mark (multiselect with mouse) entries and
+**  replace this value with some other value
+** Delete entries
+** Export to a file
+** copy entry to clipboard as ldif
+
+
+image::dok/resources/images/qs11.png[qs11]
+
+*example for exporting*
+
+image::dok/resources/images/qs12.png[qs12]
+
+=== LDAP and LDIF Compare
+
+==== LDIF Files Compare
+
+* open target window
+* open source ldif file
+* open target ldif file
+
+image::dok/resources/images/qs13.png[qs13]
+
+Now you see both files in Ldap/Ldif Explorer.
+
+image::dok/resources/images/qs14.png[qs14]
+
+To compare them, select start DN in source file and start DN in target File.
+Right mouse click in target window and click on compare.
+
+image::dok/resources/images/qs15.png[qs15]
+
+In next windows just click on "run compare".
+
+After compare is done, new compare window will be shown.
+
+`>>` Entry same as in target, but children are not
+
+`!` Entry in source and target are not same
+
+image::dok/resources/images/qs16.png[qs16]
+
+Show only entries where selected attribute is not equal
+
+image::dok/resources/images/qs17.png[qs17]
+
+Copy selected attribute on the whole tree
+
+image::dok/resources/images/qs18.png[qs18]
+
+Sync only one attribute on selected entry (right mouse on attribute)
+
+image::dok/resources/images/qs19.png[qs19]
+
+Sync one attribute on selected entries.
+Select more entries and with right mouse button you can select the attribute to sync.
+
+image::dok/resources/images/qs20.png[qs20]
+
+You can do this for online LDAP instances as well.
+Just open LDAP connection to source and in target window to target LDAP.
+Select start DN to compare on both and start compare with right mouse button
+on selected target entry.
+
+
+
+
+
+

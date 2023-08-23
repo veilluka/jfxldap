@@ -3,7 +3,7 @@
 <?import javafx.scene.control.SplitPane?>
 <?import javafx.scene.layout.VBox?>
 
-<SplitPane xmlns="http://javafx.com/javafx/8.0.141" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.CollectionsController">
+<SplitPane xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.CollectionsController">
    <items>
        <VBox>
            <children>

@@ -17,9 +17,6 @@ plugins {
 
 }
 
-
-
-
 val compileJava: JavaCompile by tasks
 
 application {

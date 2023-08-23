@@ -53,6 +53,7 @@ public class Main extends Application {
         primaryStage.setWidth(bounds.getWidth());
         primaryStage.setHeight(bounds.getHeight());
         primaryStage.setScene(new Scene(root));
+        primaryStage.getScene().getStylesheets().add("/ch/vilki/jfxldap/styles.css");
         primaryStage.show();
     }
 

@@ -51,3 +51,93 @@
     /*-fx-stroke-width: 2;*/
     -fx-stroke-line-join: bevel;
 }
+
+.root {
+    -fx-font-family: "Arial", sans-serif;
+    -fx-background-color: #f4f4f4;
+}
+
+.button {
+    -fx-background-color: #3498db;
+    -fx-text-fill: #ffffff;
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+    -fx-padding: 5px 10px;
+    -fx-font-size: 12px;
+}
+
+.button:hover {
+    -fx-background-color: #2980b9;
+}
+
+.button:pressed {
+    -fx-background-color: #2471a3;
+}
+
+.label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #333333;
+}
+
+.text-field, .text-area {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d3d3d3;
+    -fx-border-radius: 5px;
+    -fx-padding: 10px;
+    -fx-font-size: 12px;
+}
+
+.text-field:focused, .text-area:focused {
+    -fx-border-color: #3498db;
+}
+
+.menu-bar {
+    -fx-background-color: #2c3e50;
+}
+
+.menu-bar .label {
+    -fx-text-fill: #ecf0f1;
+}
+
+.menu-item .label {
+    -fx-text-fill: #2c3e50;
+}
+
+.menu-item:hover {
+    -fx-background-color: #ecf0f1;
+}
+
+.list-view, .tree-view, .table-view {
+    -fx-background-color: #ffffff;
+    -fx-border-color: #d3d3d3;
+    -fx-border-radius: 5px;
+}
+
+.list-cell:filled:selected, .tree-cell:filled:selected, .table-row-cell:selected {
+    -fx-background-color: #3498db;
+    -fx-text-fill: #ffffff;
+}
+
+.scroll-bar:vertical {
+    -fx-background-color: #ecf0f1;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:vertical .thumb {
+    -fx-background-color: #bdc3c7;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+}
+
+.scroll-bar:horizontal {
+    -fx-background-color: #ecf0f1;
+    -fx-border-color: transparent;
+}
+
+.scroll-bar:horizontal .thumb {
+    -fx-background-color: #bdc3c7;
+    -fx-background-radius: 5px;
+    -fx-border-radius: 5px;
+}
+
+/* Add more styles as needed for other controls */
