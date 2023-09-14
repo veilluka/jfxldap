@@ -3,6 +3,7 @@ package ch.vilki.jfxldap.backend;
 import com.google.common.eventbus.EventBus;
 import com.unboundid.ldap.sdk.*;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.SelectionMode;
@@ -132,7 +133,7 @@ public class SearchTree extends TreeView<SearchEntry> {
             if (!_flatSearch) {
                 runSearchRecursive(root, connection, searchValue, attributes, _ignoreCase, displayAttribute, deadLink, baseDN, progress);
             } else {
-                root.getValue().setValueFound(false);
+                root.getValue().ValueFound.set(false);
                 runSearchFlat(root, connection, searchValue, _ignoreCase, displayAttribute, deadLink, baseDN, progress);
             }
             if (_breakOperation) {
@@ -237,9 +238,9 @@ public class SearchTree extends TreeView<SearchEntry> {
                 searchEntry.setDisplayAttribute(displayAttribute);
                 if (!_filter.equals(FILTER_NOT_SET)) {
                     if (matchesFilter(searchEntry.getEntry())) {
-                        searchEntry.setValueFound(true);
+                        searchEntry.ValueFound.set(true);
                     } else {
-                        searchEntry.setValueFound(false);
+                        searchEntry.ValueFound.set(false);
                     }
                 }
 
@@ -304,13 +305,13 @@ public class SearchTree extends TreeView<SearchEntry> {
     private void evaluateTree(TreeItem<SearchEntry> entry) {
         if (entry.getChildren().isEmpty()) {
             boolean found = false;
-            found = entry.getValue().getValueFound();
+            found = entry.getValue().ValueFound.get();
             TreeItem<SearchEntry> runUp = entry.getParent();
             while (runUp != null) {
                 if (found) {
-                    runUp.getValue().setChildrenFound(found);
+                    runUp.getValue().getChildrenFound().set(found);
                 } else {
-                    found = runUp.getValue().getValueFound();
+                    found = runUp.getValue().ValueFound.get();
                 }
                 runUp = runUp.getParent();
             }
@@ -323,11 +324,11 @@ public class SearchTree extends TreeView<SearchEntry> {
         Iterator<TreeItem<SearchEntry>> iter = entry.getChildren().iterator();
         while (iter.hasNext()) {
             TreeItem<SearchEntry> element = iter.next();
-            if (!element.getValue().getValueFound() && !element.getValue().getChildrenFound()) {
+            if (!element.getValue().ValueFound.get() && !element.getValue().getChildrenFound().getValue()) {
                 iter.remove();
             } else {
                 showOnlyFoundEntries(element);
-                if (!element.getValue().getValueFound() && element.getChildren().isEmpty()) iter.remove();
+                if (!element.getValue().ValueFound.get() && element.getChildren().isEmpty()) iter.remove();
             }
         }
     }
@@ -439,20 +440,20 @@ public class SearchTree extends TreeView<SearchEntry> {
 
     private void setIcon(TreeItem<SearchEntry> entry) {
         if (entry == null) return;
-        if (entry.getValue().getValueFound()) {
+        if (entry.getValue().ValueFound.get()) {
             Platform.runLater(() -> entry.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_NOT_EQUAL)));
         } else {
-            if (entry.getValue().getChildrenFound()) {
+            if (entry.getValue().getChildrenFound().getValue()) {
                 Platform.runLater(() -> entry.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.SUBFOLDER_NOT_EQUAL)));
             } else {
                 Platform.runLater(() -> entry.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_EQUAL)));
             }
         }
         for (TreeItem<SearchEntry> child : entry.getChildren()) {
-            if (child.getValue().getValueFound()) {
+            if (child.getValue().ValueFound.get()) {
                 Platform.runLater(() -> child.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_NOT_EQUAL)));
             } else {
-                if (child.getValue().getChildrenFound()) {
+                if (child.getValue().getChildrenFound().getValue()) {
                     Platform.runLater(() -> child.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.SUBFOLDER_NOT_EQUAL)));
                 } else
                     Platform.runLater(() -> child.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_EQUAL)));
@@ -490,9 +491,9 @@ public class SearchTree extends TreeView<SearchEntry> {
                     }
                     if (!_filter.equals(FILTER_NOT_SET)) {
                         if (matchesFilter(searchEntry.getEntry())) {
-                            searchEntry.setValueFound(true);
+                            searchEntry.ValueFound.set(true);
                         } else {
-                            searchEntry.setValueFound(false);
+                            searchEntry.ValueFound.set(false);
                         }
                     }
                     TreeItem<SearchEntry> child = new TreeItem<>(searchEntry);
@@ -565,8 +566,8 @@ public class SearchTree extends TreeView<SearchEntry> {
                     TreeItem<SearchEntry> child = new TreeItem<>(searchEntry);
                     TreeItem<SearchEntry> foundParent = getParent(entry, connection, searchValue,
                             ignoreCase, displayAttribute, deadLink, baseDN);
-                    foundParent.getValue().setChildrenFound(true);
-                    foundParent.getValue().setValueFound(false);
+                    foundParent.getValue().setChildrenFound(new SimpleBooleanProperty(true));
+                    foundParent.getValue().ValueFound.set(false);
                     if (!_addedFlatSearch.containsKey(child.getValue().getDn())) {
                         _addedFlatSearch.put(child.getValue().getDn(), child);
                         foundParent.getChildren().add(child);
@@ -602,7 +603,7 @@ public class SearchTree extends TreeView<SearchEntry> {
                 parentSearchEntry = new SearchEntry(parentEntry, _searchAttributes, _ignoreAttributes, baseDN, connection);
             }
             parentSearchEntry.setDisplayAttribute(displayAttribute);
-            parentSearchEntry.setValueFound(false);
+            parentSearchEntry.ValueFound.set(false);
             parentSearchEntry.setChildrenFound(true);
             TreeItem<SearchEntry> parentCreated = new TreeItem<>(parentSearchEntry);
             TreeItem<SearchEntry> nextParent =

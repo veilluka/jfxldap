@@ -31,6 +31,7 @@ public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+
         _primaryStage = primaryStage;
         _main=this;
         readConfiguration();

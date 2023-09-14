@@ -313,7 +313,7 @@ public class ExportWindowController  implements ILoader, IProgress {
     {
         if(item != null )
         {
-            if(item.getValue().getValueFound())
+            if(item.getValue().ValueFound.get())
             {
                 resultList.add(item);
             }

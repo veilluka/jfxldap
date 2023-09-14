@@ -164,7 +164,7 @@ public class SearchResultController implements ILoader, IProgress {
         List<TreeItem<SearchEntry>> listToBeDeleted = new ArrayList<>();
         for(TreeItem<SearchEntry> item: selectedItems)
         {
-            if(item.getValue().getValueFound() && !item.getValue().getChildrenFound())
+            if(item.getValue().ValueFound.get() && !item.getValue().getChildrenFound().getValue())
             {
                listToBeDeleted.add(item);
             }
@@ -367,7 +367,7 @@ public class SearchResultController implements ILoader, IProgress {
                 _main._ctManager._progressWindowController._stage.hide();
                 _main._ctManager._progressWindowController.clearProgressWindow();
                 _searchTree.expandTree();
-                boolean valuesFound = _searchTree.getRoot().getValue().getChildrenFound();
+                boolean valuesFound = _searchTree.getRoot().getValue().getChildrenFound().getValue();
                 _deleteEntry.setVisible(valuesFound);
                 _exportEntry.setVisible(valuesFound);
                 _replace_value.setVisible(valuesFound);
