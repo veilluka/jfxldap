@@ -56,7 +56,7 @@ public class LdapExploreController implements IProgress, ILoader {
     /***************** GUI ELEMENTS *****************************************/
 
     @FXML
-    TreeView<CustomEntry> _treeView;
+    TreeView<CustomEntryItem> _treeView;
     @FXML
     TreeView<CollectionEntry> _collectionTree;
 
@@ -109,7 +109,7 @@ public class LdapExploreController implements IProgress, ILoader {
     ExecutorService _executor = Executors.newFixedThreadPool(5);
     String _lastSelectedDirectory;
     String _selectedDN;
-    TreeItem<CustomEntry> _observedEntry;
+    TreeItem<CustomEntryItem> _observedEntry;
     private static LDIFReader _ldifReader = null;
     private boolean _breakFileLoad = false;
     private static String _openedLDIFFile = null;
@@ -138,10 +138,10 @@ public class LdapExploreController implements IProgress, ILoader {
         return _exploreWindow;
     }
 
-    Comparator<TreeItem<CustomEntry>> _treeItemCustomComparator =
-            Comparator.comparing((TreeItem<CustomEntry> one) -> one.getValue().getDn());
+    Comparator<TreeItem<CustomEntryItem>> _treeItemCustomComparator =
+            Comparator.comparing((TreeItem<CustomEntryItem> one) -> one.getValue().getDn());
 
-    Map<String, TreeItem<CustomEntry>> _allTreeEntries = new HashMap<>();
+    Map<String, TreeItem<CustomEntryItem>> _allTreeEntries = new HashMap<>();
 
 
     @Override
@@ -160,10 +160,10 @@ public class LdapExploreController implements IProgress, ILoader {
 
         _treeView.setCellFactory(new Callback<>() {
             @Override
-            public TreeCell<CustomEntry> call(TreeView<CustomEntry> param) {
+            public TreeCell<CustomEntryItem> call(TreeView<CustomEntryItem> param) {
                 return new TreeCell<>() {
                     @Override
-                    protected void updateItem(CustomEntry item, boolean empty) {
+                    protected void updateItem(CustomEntryItem item, boolean empty) {
                         textProperty().unbind();
                         styleProperty().unbind();
                         if (empty || item == null) {
@@ -172,7 +172,7 @@ public class LdapExploreController implements IProgress, ILoader {
                             styleProperty().set(null);
                             return;
                         }
-                        textProperty().bind(item.rdnProperty());
+                        textProperty().bind(item._rdn);
                         if (!item.is_dummy()) {
                             setGraphic(Icons.get_iconInstance().getObjectType(item.get_objectClass()));
                         }
@@ -223,9 +223,9 @@ public class LdapExploreController implements IProgress, ILoader {
         _hboxFilter.setDisable(true);
     }
 
-    private TreeItem<CustomEntry> findChild(TreeItem<CustomEntry> entry, String rdn) {
+    private TreeItem<CustomEntryItem> findChild(TreeItem<CustomEntryItem> entry, String rdn) {
         if (entry.getChildren() == null || entry.getChildren().isEmpty()) return null;
-        for (TreeItem<CustomEntry> e : entry.getChildren()) {
+        for (TreeItem<CustomEntryItem> e : entry.getChildren()) {
             String comapareRdn = e.getValue().getRdn();
             if (comapareRdn != null && comapareRdn.equalsIgnoreCase(rdn)) return e;
         }
@@ -244,9 +244,9 @@ public class LdapExploreController implements IProgress, ILoader {
         _iAmTargetExplorer = true;
     }
 
-    private void setIcons(TreeItem<CustomEntry> entryTreeItem) {
+    private void setIcons(TreeItem<CustomEntryItem> entryTreeItem) {
         if (entryTreeItem == null) return;
-        for (TreeItem<CustomEntry> child : entryTreeItem.getChildren()) {
+        for (TreeItem<CustomEntryItem> child : entryTreeItem.getChildren()) {
             if (child.getValue().is_dummy())
                 child.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.SUBFOLDER_NOT_EQUAL));
             else child.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_EQUAL));
@@ -267,7 +267,7 @@ public class LdapExploreController implements IProgress, ILoader {
         }
     }
 
-    private void setNewDisplayAttribute(TreeItem<CustomEntry> treeItem, String attributeName) {
+    private void setNewDisplayAttribute(TreeItem<CustomEntryItem> treeItem, String attributeName) {
         if (treeItem == null) return;
         if (treeItem.getValue() == null || treeItem.getValue() == null || treeItem.getValue().getEntry() == null)
             return;
@@ -280,7 +280,7 @@ public class LdapExploreController implements IProgress, ILoader {
         } catch (LDAPException e) {
             logger.error(e);
         }
-        for (TreeItem<CustomEntry> item : treeItem.getChildren()) setNewDisplayAttribute(item, attributeName);
+        for (TreeItem<CustomEntryItem> item : treeItem.getChildren()) setNewDisplayAttribute(item, attributeName);
     }
 
     @FXML
@@ -300,7 +300,7 @@ public class LdapExploreController implements IProgress, ILoader {
         });
 
         _export.setOnAction(x -> {
-            TreeItem<CustomEntry> selectedItem = _treeView.getSelectionModel().getSelectedItem();
+            TreeItem<CustomEntryItem> selectedItem = _treeView.getSelectionModel().getSelectedItem();
             if (selectedItem == null) return;
             _main._ctManager._exportWindowController.showExportWindow(get_currentConnection(), selectedItem.getValue().getDn());
 
@@ -394,7 +394,7 @@ public class LdapExploreController implements IProgress, ILoader {
         _expandedListenerOnline = (ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
             BooleanProperty bb = (BooleanProperty) observable;
 
-            TreeItem t = (TreeItem<CustomEntry>) bb.getBean();
+            TreeItem t = (TreeItem<CustomEntryItem>) bb.getBean();
             _observedEntry = t;
             _treeView.fireEvent(new LdapExplorerEvent(LdapExplorerEvent.ELEMENT_SELECTED, _observedEntry));
             _main._ctManager._progressWindowController.clearProgressWindow();
@@ -424,7 +424,7 @@ public class LdapExploreController implements IProgress, ILoader {
 
         _expandedListenerFile = (ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
             BooleanProperty bb = (BooleanProperty) observable;
-            TreeItem t = (TreeItem<CustomEntry>) bb.getBean();
+            TreeItem t = (TreeItem<CustomEntryItem>) bb.getBean();
             _observedEntry = t;
             _treeView.fireEvent(new LdapExplorerEvent(LdapExplorerEvent.ELEMENT_SELECTED, _observedEntry));
             if (_observedEntry.isExpanded()) {
@@ -446,9 +446,9 @@ public class LdapExploreController implements IProgress, ILoader {
         }
     }
 
-    private void getAllEntries(TreeItem<CustomEntry> item) {
+    private void getAllEntries(TreeItem<CustomEntryItem> item) {
         _allTreeEntries.put(item.getValue().getDn(), item);
-        for (TreeItem<CustomEntry> child : item.getChildren()) {
+        for (TreeItem<CustomEntryItem> child : item.getChildren()) {
             _allTreeEntries.put(child.getValue().getDn(), child);
             getAllEntries(child);
         }
@@ -552,7 +552,7 @@ public class LdapExploreController implements IProgress, ILoader {
          Connection cc = new Connection(selectedFile.getAbsolutePath(),this,false);
          cc.set_fileMode(true);
          set_currentConnection(cc);
-        CustomEntry customEntry = new CustomEntry("cn=" + selectedFile.getAbsolutePath());
+        CustomEntryItem CustomEntryItem = new CustomEntryItem("cn=" + selectedFile.getAbsolutePath());
         try {
             List<Attribute> newAttributes = new ArrayList<>();
             newAttributes.add(new Attribute("TYPE", "DUMMY"));
@@ -569,16 +569,16 @@ public class LdapExploreController implements IProgress, ILoader {
             }
             builder.deleteCharAt(builder.length() - 1);
             Entry entry1 = new Entry(builder.toString(), newAttributes);
-            customEntry.setEntry(entry1);
-            customEntry.set_dummy(true);
-            customEntry.setRdn(selectedFile.getName());
+            CustomEntryItem.setEntry(entry1);
+            CustomEntryItem.setDummy();
+            CustomEntryItem.setRdn(selectedFile.getName());
             cc.refreshEntry(entry1);
         } catch (Exception e) {
             _progressStage.hide();
             GuiHelper.EXCEPTION("Exception opening file", e.getMessage(), e);
             logger.error("Exception during opening file", e);
         }
-        _treeView.setRoot(new TreeItem<>(customEntry));
+        _treeView.setRoot(new TreeItem<>(CustomEntryItem));
         _treeView.getRoot().setExpanded(true);
 
         _executor.submit(() -> {
@@ -636,27 +636,27 @@ public class LdapExploreController implements IProgress, ILoader {
         cc.setSchemaAttributes(foundAttributes.stream().collect(Collectors.toList()));
     }
 
-    private void expand(TreeItem<CustomEntry> item) {
+    private void expand(TreeItem<CustomEntryItem> item) {
         if (item != null && !item.isLeaf()) {
             if (item.getValue().is_dummy()) item.setExpanded(true);
-            for (TreeItem<CustomEntry> child : item.getChildren()) {
+            for (TreeItem<CustomEntryItem> child : item.getChildren()) {
                 expand(child);
             }
         }
     }
 
-    private void addEntriesFromLdif(TreeItem<CustomEntry> treeEntry, Entry entry, String dn) {
+    private void addEntriesFromLdif(TreeItem<CustomEntryItem> treeEntry, Entry entry, String dn) {
         if (dn.length() == 0) return;
         String[] split = dn.split(",");
         if (split == null || split.length == 1) {
-            TreeItem<CustomEntry> insert = findChild(treeEntry, dn);
-            ObservableList<TreeItem<CustomEntry>> backup = null;
+            TreeItem<CustomEntryItem> insert = findChild(treeEntry, dn);
+            ObservableList<TreeItem<CustomEntryItem>> backup = null;
             if (insert != null) {
                 backup = insert.getChildren();
                 treeEntry.getChildren().remove(insert);
             }
-            CustomEntry customEntry = new CustomEntry(entry);
-            TreeItem<CustomEntry> ti = new TreeItem<>(customEntry);
+            CustomEntryItem CustomEntryItem = new CustomEntryItem(entry);
+            TreeItem<CustomEntryItem> ti = new TreeItem<>(CustomEntryItem);
             ti.expandedProperty().addListener(_expandedListenerFile);
             treeEntry.getChildren().add(ti);
             if (backup != null && !backup.isEmpty()) {
@@ -671,19 +671,19 @@ public class LdapExploreController implements IProgress, ILoader {
         }
         builder.deleteCharAt(builder.length() - 1);
 
-        TreeItem<CustomEntry> child = findChild(treeEntry, split[split.length - 1]);
+        TreeItem<CustomEntryItem> child = findChild(treeEntry, split[split.length - 1]);
         if (child == null) {
             String dummyDN = entry.getDN().replace(builder.toString() + ",", "");
-            CustomEntry customEntry = new CustomEntry(dummyDN);
-            customEntry.set_dummy(true);
+            CustomEntryItem CustomEntryItem = new CustomEntryItem(dummyDN);
+            CustomEntryItem.setDummy();
             List<Attribute> newAttributes = new ArrayList<>();
             Attribute attribute = new Attribute("description", "this is dummy entry");
             newAttributes.add(attribute);
             Entry entry1 = new Entry(dummyDN, newAttributes);
             entry1.setDN(dummyDN);
-            customEntry.setEntry(entry1);
-            customEntry.setRdn(split[split.length - 1]);
-            child = new TreeItem<>(customEntry);
+            CustomEntryItem.setEntry(entry1);
+            CustomEntryItem.setRdn(split[split.length - 1]);
+            child = new TreeItem<>(CustomEntryItem);
             child.expandedProperty().addListener(_expandedListenerFile);
             treeEntry.getChildren().add(child);
         }
@@ -746,18 +746,18 @@ public class LdapExploreController implements IProgress, ILoader {
     @Override
     public void signalTaskDone(String taskName, String description, Exception e) {
         Platform.runLater(()->{
-            List<CustomEntry> items = new ArrayList();
+            List<CustomEntryItem> items = new ArrayList();
             if(_currentReader != null &&  _currentReader.get_children() != null)
             {
                 for (Entry entry : _currentReader.get_children()) {
-                    CustomEntry collectionEntry = new CustomEntry(entry);
+                    CustomEntryItem collectionEntry = new CustomEntryItem(entry);
                     if (get_currentConnection().getDisplayAttribute() != null) {
                         collectionEntry.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
                     }
                     items.add(collectionEntry);
                 }
             }
-            List<CustomEntry> sorted_items = items.stream().sorted().collect(Collectors.toList());
+            List<CustomEntryItem> sorted_items = items.stream().sorted().collect(Collectors.toList());
            _progressController.setProgress(1.0, "LDAP Read done, sort and build tree now ");
             if (_currentReader == null) {
                 _progressStage.hide();
@@ -769,9 +769,9 @@ public class LdapExploreController implements IProgress, ILoader {
 
 
                 if (_treeView.getRoot() == null) {
-                    _treeView.setRoot(new TreeItem<>(new CustomEntry(_currentReader.get_mainEntry())));
-                    for (CustomEntry custom : sorted_items) {
-                        TreeItem<CustomEntry> item = new TreeItem<>(custom);
+                    _treeView.setRoot(new TreeItem<>(new CustomEntryItem(_currentReader.get_mainEntry())));
+                    for (CustomEntryItem custom : sorted_items) {
+                        TreeItem<CustomEntryItem> item = new TreeItem<>(custom);
                         _treeView.getRoot().getChildren().add(item);
                         Entry child = null;
                         try {
@@ -780,37 +780,37 @@ public class LdapExploreController implements IProgress, ILoader {
                             GuiHelper.EXCEPTION("Connection Error", e1.getLocalizedMessage(), e1);
                         }
                         if (child != null) {
-                            CustomEntry customEntryDummy = new CollectionEntry(child);
-                            customEntryDummy.set_dummy(true);
+                            CustomEntryItem CustomEntryItemDummy = new CollectionEntry(child);
+                            CustomEntryItemDummy.setDummy();
                             item.expandedProperty().addListener(_expandedListenerOnline);
-                            item.getChildren().add(new TreeItem<>(customEntryDummy));
+                            item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
                             _treeView.getRoot().setExpanded(true);
                         }
                     }
                 } else {
                     if (_observedEntry != null) {
                         Set<String> observedEntryChildren = _observedEntry.getChildren().stream().map(x -> x.getValue().getDn()).collect(Collectors.toSet());
-                        for (CustomEntry customEntry : sorted_items) {
-                            if (observedEntryChildren.contains(customEntry.getDn())) continue;
-                            TreeItem<CustomEntry> item = new TreeItem<>(customEntry);
+                        for (CustomEntryItem CustomEntryItem : sorted_items) {
+                            if (observedEntryChildren.contains(CustomEntryItem.getDn())) continue;
+                            TreeItem<CustomEntryItem> item = new TreeItem<>(CustomEntryItem);
                             Entry child = null;
                             try {
                                 if (sorted_items.size() > 100)
                                 {
-                                    child = customEntry.getEntry();
+                                    child = CustomEntryItem.getEntry();
                                 }
                                 else
                                 {
-                                    child = _currentReader.getOneChild(customEntry.getEntry().getDN());
+                                    child = _currentReader.getOneChild(CustomEntryItem.getEntry().getDN());
                                 }
                             } catch (Exception e1) {
                                 e1.printStackTrace();
                             }
                             if (child != null && sorted_items.size() < 5000) {
                                 item.expandedProperty().addListener(_expandedListenerOnline);
-                                CustomEntry customEntryDummy = new CustomEntry(child);
-                                customEntryDummy.set_dummy(true);
-                                item.getChildren().add(new TreeItem<>(customEntryDummy));
+                                CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
+                                CustomEntryItemDummy.setDummy();
+                                item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
                             }
                             _observedEntry.getChildren().add(item);
                         }
@@ -855,8 +855,8 @@ public class LdapExploreController implements IProgress, ILoader {
         _main.get_entryDiffView().updateValues(null);
     }
 
-    private void removeListerners(TreeItem<CustomEntry> item) {
-         for (TreeItem<CustomEntry> child : item.getChildren()) {
+    private void removeListerners(TreeItem<CustomEntryItem> item) {
+         for (TreeItem<CustomEntryItem> child : item.getChildren()) {
             child.expandedProperty().removeListener(_expandedListenerOnline);
             child.expandedProperty().unbind();
             removeListerners(child);
@@ -919,7 +919,7 @@ public class LdapExploreController implements IProgress, ILoader {
         _textFieldLdapFilter.set_currConnection(_currConnection);
     }
 
-    public void refreshTree_checkMissingEntries(TreeItem<CustomEntry> entryTreeItem) {
+    public void refreshTree_checkMissingEntries(TreeItem<CustomEntryItem> entryTreeItem) {
         // check missing first   //entryTreeItem.getValue().getEntry()
         boolean missing = false;
         try {
@@ -930,15 +930,15 @@ public class LdapExploreController implements IProgress, ILoader {
         }
         if (missing) entryTreeItem.getParent().getChildren().remove(entryTreeItem);
         else {
-            for (TreeItem<CustomEntry> entry : entryTreeItem.getChildren()) refreshTree_checkMissingEntries(entry);
+            for (TreeItem<CustomEntryItem> entry : entryTreeItem.getChildren()) refreshTree_checkMissingEntries(entry);
         }
         _treeView.refresh();
     }
 
-    public void refreshTree_checkAddedEntries(TreeItem<CustomEntry> entryTreeItem) {
+    public void refreshTree_checkAddedEntries(TreeItem<CustomEntryItem> entryTreeItem) {
         String searchDN = entryTreeItem.getValue().getDn();
         Set<String> childrenDN = new HashSet<>();
-        for (TreeItem<CustomEntry> c : entryTreeItem.getChildren()) {
+        for (TreeItem<CustomEntryItem> c : entryTreeItem.getChildren()) {
             childrenDN.add(c.getValue().getDn());
         }
         _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
@@ -953,14 +953,14 @@ public class LdapExploreController implements IProgress, ILoader {
             future.get();
             for (Entry c : _currentReader.get_children()) {
                 if (!childrenDN.contains(c.getDN())) {
-                    CustomEntry customEntry = new CustomEntry(c);
-                    TreeItem<CustomEntry> item = new TreeItem<>(customEntry);
-                    Entry child = _currentReader.getOneChild(customEntry.getEntry().getDN());
+                    CustomEntryItem CustomEntryItem = new CustomEntryItem(c);
+                    TreeItem<CustomEntryItem> item = new TreeItem<>(CustomEntryItem);
+                    Entry child = _currentReader.getOneChild(CustomEntryItem.getEntry().getDN());
                     if (child != null && _currentReader.get_children().size() < 5000) {
                         item.expandedProperty().addListener(_expandedListenerOnline);
-                        CustomEntry customEntryDummy = new CustomEntry(child);
-                        customEntryDummy.set_dummy(true);
-                        item.getChildren().add(new TreeItem<>(customEntryDummy));
+                        CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
+                        CustomEntryItemDummy.setDummy();
+                        item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
                     }
                     entryTreeItem.getChildren().add(item);
                     _treeView.refresh();
@@ -982,11 +982,11 @@ public class LdapExploreController implements IProgress, ILoader {
         VBox.setVgrow(_treeView, Priority.ALWAYS);
         _treeView.setMaxHeight(Double.MAX_VALUE);
 
-        _treeView.setCellFactory(new Callback<TreeView<CustomEntry>, TreeCell<CustomEntry>>() {
+        _treeView.setCellFactory(new Callback<TreeView<CustomEntryItem>, TreeCell<CustomEntryItem>>() {
             @Override
-            public TreeCell<CustomEntry> call(TreeView<CustomEntry> param) {
-                return new TreeCell<CustomEntry>() {
-                    protected void updateItem(CustomEntry item, boolean empty) {
+            public TreeCell<CustomEntryItem> call(TreeView<CustomEntryItem> param) {
+                return new TreeCell<CustomEntryItem>() {
+                    protected void updateItem(CustomEntryItem item, boolean empty) {
                         textProperty().unbind();
                         styleProperty().unbind();
                         if (empty || item == null) {
@@ -996,8 +996,8 @@ public class LdapExploreController implements IProgress, ILoader {
                             return;
                         }
                         if (item != null) {
-                            styleProperty().bind(item.StyleProperty());
-                            textProperty().bind(item.rdnProperty());
+                            styleProperty().bind(item.get_styleProperty());
+                            textProperty().bind(item._rdn);
                         }
                         super.updateItem(item, empty);
                     }
@@ -1014,9 +1014,9 @@ public class LdapExploreController implements IProgress, ILoader {
             }
         });
         _treeView.getSelectionModel().selectedItemProperty()
-                .addListener(new ChangeListener<TreeItem<CustomEntry>>() {
+                .addListener(new ChangeListener<TreeItem<CustomEntryItem>>() {
                     @Override
-                    public void changed(ObservableValue<? extends TreeItem<CustomEntry>> observable, TreeItem<CustomEntry> oldValue, TreeItem<CustomEntry> newValue) {
+                    public void changed(ObservableValue<? extends TreeItem<CustomEntryItem>> observable, TreeItem<CustomEntryItem> oldValue, TreeItem<CustomEntryItem> newValue) {
                         if (newValue != null) {
                             _observedEntry = newValue;
                             _selectedDN = _observedEntry.getValue().getDn();

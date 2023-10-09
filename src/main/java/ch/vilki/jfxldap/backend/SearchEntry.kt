@@ -9,7 +9,7 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import java.util.*
 
-class SearchEntry : CustomEntry {
+class SearchEntry : CustomEntryItem {
     @JvmField
     public var ValueFound = SimpleBooleanProperty(false)
     public var ChildrenFound = SimpleBooleanProperty(false)
@@ -164,6 +164,6 @@ class SearchEntry : CustomEntry {
     }
 
     override fun toString(): String {
-        return rdn
+        return _rdn.get()
     }
 }

@@ -40,7 +40,7 @@ public class DeleteEntriesController implements ILoader, IProgress {
     String      _selectedDN = null;
     ToggleGroup _deleteEntryToggleGroup = new ToggleGroup();
     UnboundidLdapSearch _unboundidLdapSearch = null;
-    TreeItem<CustomEntry> _selectedEntry = null;
+    TreeItem<CustomEntryItem> _selectedEntry = null;
     Scene _scene;
     Stage _stage;
     private Main _main;
@@ -84,7 +84,7 @@ public class DeleteEntriesController implements ILoader, IProgress {
         _main = main;
     }
 
-    public void show(TreeItem<CustomEntry> selectedEntry, Connection connection, String dn )
+    public void show(TreeItem<CustomEntryItem> selectedEntry, Connection connection, String dn )
     {
         if(selectedEntry == null || connection == null || dn == null ) return;
         _buttonDelete.setStyle(st1);

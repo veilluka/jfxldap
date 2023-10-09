@@ -531,7 +531,7 @@ public class CollectionsController implements IProgress, ILoader {
                     } else {
                         ce.expandedProperty().addListener(expandedListener);
                         CollectionEntry dummyCE = new CollectionEntry(found.getValue().getEntry());
-                        dummyCE.set_dummy(true);
+                        dummyCE.setDummy();
                         TreeItem<CollectionEntry> dummyItem = new TreeItem<>(dummyCE);
                         ce.getChildren().add(dummyItem);
                     }
@@ -550,7 +550,7 @@ public class CollectionsController implements IProgress, ILoader {
                         }
                     }
                     CollectionEntry collectionEntry = new CollectionEntry(found.getValue().getEntry());
-                    collectionEntry.set_dummy(true);
+                    collectionEntry.setDummy();
                     TreeItem<CollectionEntry> dummyItem = new TreeItem<>(collectionEntry);
                     addedWantedItem.getChildren().add(dummyItem);
                     addedWantedItem.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.ENTRY_EQUAL));
@@ -740,7 +740,7 @@ public class CollectionsController implements IProgress, ILoader {
                             }
                             if (child != null) {
                                 CollectionEntry collectionEntryDummy = new CollectionEntry(child);
-                                collectionEntryDummy.set_dummy(true);
+                                collectionEntryDummy.setDummy();
                                 TreeItem<CollectionEntry> dummyItem = new TreeItem<>(collectionEntryDummy);
                                 item.expandedProperty().addListener(expandedListener);
                                 item.getChildren().add(new TreeItem<>(collectionEntryDummy));
@@ -778,7 +778,7 @@ public class CollectionsController implements IProgress, ILoader {
                                 if (child != null) {
                                     item.expandedProperty().addListener(expandedListener);
                                     CollectionEntry collectionEntryDummy = new CollectionEntry(child);
-                                    collectionEntryDummy.set_dummy(true);
+                                    collectionEntryDummy.setDummy();
                                     item.getChildren().add(new TreeItem<>(collectionEntryDummy));
                                 }
                                 _observedEntry.getChildren().add(item);

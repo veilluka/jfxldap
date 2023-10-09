@@ -2,7 +2,7 @@ package ch.vilki.jfxldap.gui;
 
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.Connection;
-import ch.vilki.jfxldap.backend.CustomEntry;
+import ch.vilki.jfxldap.backend.CustomEntryItem;
 import ch.vilki.jfxldap.backend.Helper;
 import ch.vilki.jfxldap.backend.LdapExplorerEvent;
 import com.google.common.collect.ArrayListMultimap;
@@ -48,7 +48,7 @@ public class ShowEntryController implements ILoader {
     VBox _showEntryWindow;
 
     private Main _main;
-    private CustomEntry _selectedEntry = null;
+    private CustomEntryItem _selectedEntry = null;
     private boolean _ignoreCase = false;
     private boolean _deadLink = false;
     private String _searchValue;
@@ -334,12 +334,12 @@ public class ShowEntryController implements ILoader {
         _valuesTextFlowMap.clear();
     }
 
-    public void writeEntry(TreeItem<CustomEntry> customEntry, Connection connection) {
+    public void writeEntry(TreeItem<CustomEntryItem> customEntry, Connection connection) {
         if (!customEntry.getValue().is_dummy()) customEntry.getValue().readAllAttributes(connection);
         writeSearchResult(customEntry.getValue(), false, false, null, connection);
     }
 
-    public void writeSearchResult(CustomEntry entry, boolean ignoreCase, boolean deadLink,
+    public void writeSearchResult(CustomEntryItem entry, boolean ignoreCase, boolean deadLink,
                                   String searchValue, Connection connection) {
         _main._ctManager._entryView.setSearchMode(searchValue);
         _main._ctManager._entryView.updateValue(entry,_main._ctManager._ldapSourceExploreCtrl.get_currentConnection());

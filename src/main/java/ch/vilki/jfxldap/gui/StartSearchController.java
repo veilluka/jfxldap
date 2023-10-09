@@ -1,7 +1,7 @@
 package ch.vilki.jfxldap.gui;
 
 import ch.vilki.jfxldap.Main;
-import ch.vilki.jfxldap.backend.CustomEntry;
+import ch.vilki.jfxldap.backend.CustomEntryItem;
 import com.unboundid.ldap.sdk.Filter;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -104,7 +104,7 @@ public class StartSearchController implements ILoader {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(()-> {
             try {
-                TreeView<CustomEntry> treeView = null;
+                TreeView<CustomEntryItem> treeView = null;
                 if(_ldapExplorerTargetAction)
                 {
                     
@@ -180,7 +180,7 @@ public class StartSearchController implements ILoader {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.submit(()-> {
             try {
-                TreeView<CustomEntry> treeView = null;
+                TreeView<CustomEntryItem> treeView = null;
                 if(_ldapExplorerTargetAction) treeView = _main._ctManager._ldapTargetExploreController._treeView;
                 else treeView = _main._ctManager._ldapSourceExploreCtrl._treeView;
                    _main._ctManager._searchResultController._searchTree.runSearch(

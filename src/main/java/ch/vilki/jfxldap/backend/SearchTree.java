@@ -65,7 +65,7 @@ public class SearchTree extends TreeView<SearchEntry> {
         this._breakOperation = _breakOperation;
     }
 
-    public void runSearch(TreeView<CustomEntry> treeView,
+    public void runSearch(TreeView<CustomEntryItem> treeView,
                           Connection connection,
                           String baseDN,
                           String searchValue,
@@ -171,13 +171,13 @@ public class SearchTree extends TreeView<SearchEntry> {
         }
     }
 
-    private void searchFile(TreeView<CustomEntry> sourceTree,
+    private void searchFile(TreeView<CustomEntryItem> sourceTree,
                             String baseDN,
                             String searchValue,
                             boolean ignoreCase,
                             String displayAttribute,
                             IProgress progress) {
-        TreeItem<CustomEntry> searchRootNode = recursiveSearch(baseDN, sourceTree.getRoot());
+        TreeItem<CustomEntryItem> searchRootNode = recursiveSearch(baseDN, sourceTree.getRoot());
         if (searchRootNode == null) {
             GuiHelper.ERROR("Search error", "Could not resolve starting node");
             logger.error("did not find start node");
@@ -219,14 +219,14 @@ public class SearchTree extends TreeView<SearchEntry> {
         _breakOperation = false;
     }
 
-    private void recursiveFileSearch(TreeItem<CustomEntry> sourceTreeItem,
+    private void recursiveFileSearch(TreeItem<CustomEntryItem> sourceTreeItem,
                                      TreeItem<SearchEntry> targetTreeItem,
                                      String searchValue,
                                      boolean ignoreCase,
                                      String displayAttribute
             , IProgress progress) {
         try {
-            for (TreeItem<CustomEntry> child : sourceTreeItem.getChildren()) {
+            for (TreeItem<CustomEntryItem> child : sourceTreeItem.getChildren()) {
                 SearchEntry searchEntry = new SearchEntry(child.getValue().getEntry(),
                         searchValue,
                         ignoreCase,
@@ -267,14 +267,14 @@ public class SearchTree extends TreeView<SearchEntry> {
         return false;
     }
 
-    private TreeItem<CustomEntry> recursiveSearch(String dn, TreeItem<CustomEntry> node) {
+    private TreeItem<CustomEntryItem> recursiveSearch(String dn, TreeItem<CustomEntryItem> node) {
 
-        if (node.getValue().getEntry() == null) logger.info("entry is null->" + node.getValue().getDn());
-        if (node.getValue().getDn().equalsIgnoreCase(dn)) return node;
-        ObservableList<TreeItem<CustomEntry>> children = node.getChildren();
-        TreeItem<CustomEntry> ret = null;
+        if (node.getValue().get_entry() == null) logger.info("entry is null->" + node.getValue().get_dn());
+        if (node.getValue().get_dn().get().equalsIgnoreCase(dn)) return node;
+        ObservableList<TreeItem<CustomEntryItem>> children = node.getChildren();
+        TreeItem<CustomEntryItem> ret = null;
         if (children != null && !children.isEmpty()) {
-            for (TreeItem<CustomEntry> child : children) {
+            for (TreeItem<CustomEntryItem> child : children) {
                 ret = recursiveSearch(dn, child);
             }
         }
@@ -338,7 +338,7 @@ public class SearchTree extends TreeView<SearchEntry> {
         _replaceStringModifications = new HashMap<>();
         for (TreeItem<SearchEntry> treeItem : treeItems) {
             if (progress != null && done++ % 10 == 0) {
-                progress.setProgress(done / (double) treeItems.size(), treeItem.getValue().getRdn());
+                progress.setProgress(done / (double) treeItems.size(), treeItem.getValue()._rdn.get());
             }
             if (treeItem.getValue().ValueFound.get()) {
                 ArrayList<Modification> modifications = new ArrayList<Modification>();

@@ -2,7 +2,7 @@ package ch.vilki.jfxldap.gui;
 
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.Connection;
-import ch.vilki.jfxldap.backend.CustomEntry;
+import ch.vilki.jfxldap.backend.CustomEntryItem;
 import com.unboundid.ldap.sdk.Attribute;
 import com.unboundid.ldap.sdk.Modification;
 import com.unboundid.ldap.sdk.ModificationType;
@@ -35,7 +35,7 @@ public class EntryView extends TreeTableView<EntryView.EntryValue> {
     TreeTableColumn<EntryValue, String> nameColumn;
     TreeTableColumn<EntryValue, String> valueColumn;
     Connection _currentConnection = null;
-    CustomEntry _currentEntry = null;
+    CustomEntryItem _currentEntry = null;
     static String _searchValue = null;
 
     Main _mainApp;
@@ -324,7 +324,7 @@ public class EntryView extends TreeTableView<EntryView.EntryValue> {
         refresh();
     }
 
-    public void updateValue(CustomEntry customEntry, Connection connection) {
+    public void updateValue(CustomEntryItem customEntry, Connection connection) {
         _currentConnection = connection;
         _currentEntry = customEntry;
         cleanUpTree();

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class CollectionEntry extends CustomEntry {
+public class CollectionEntry extends CustomEntryItem {
     static Logger logger = LogManager.getLogger(CollectionEntry.class);
 
     public static String IGNORE = "IGNORE";
@@ -177,7 +177,7 @@ public class CollectionEntry extends CustomEntry {
 
     public CollectionEntry(String dn, boolean subtree, boolean deleteTarget,
                            List<String> attributes, String filterAction, String ldapFilter, String displayDN) {
-        Dn = new SimpleStringProperty(dn);
+        get_dn().set(dn);
         Subtree = new SimpleBooleanProperty(subtree);
         OverwriteEntry = new SimpleBooleanProperty(deleteTarget);
         ObservableList<String> l = FXCollections.observableArrayList();
@@ -221,7 +221,7 @@ public class CollectionEntry extends CustomEntry {
     public String getDescription() {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("[DN=");
-        stringBuilder.append(getDn());
+        stringBuilder.append(get_dn());
         stringBuilder.append("]");
 
         stringBuilder.append("[OverwriteEntry=");
@@ -232,7 +232,7 @@ public class CollectionEntry extends CustomEntry {
     }
 
     public String toString() {
-        return Rdn.get();
+        return _rdn.get();
     }
 
 }

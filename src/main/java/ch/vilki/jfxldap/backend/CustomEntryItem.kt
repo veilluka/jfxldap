@@ -1,220 +1,151 @@
-package ch.vilki.jfxldap.backend;
+package ch.vilki.jfxldap.backend
 
-import com.unboundid.ldap.sdk.Attribute;
-import com.unboundid.ldap.sdk.Entry;
-import com.unboundid.ldap.sdk.RDN;
-import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleStringProperty;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.unboundid.ldap.sdk.Attribute
+import com.unboundid.ldap.sdk.Entry
+import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleStringProperty
+import org.apache.logging.log4j.LogManager
+import java.util.*
+import javax.swing.text.View
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+open class CustomEntryItem : Comparable<CustomEntryItem> {
 
-public class CustomEntry implements  Comparable<CustomEntry> {
-
-    static Logger logger = LogManager.getLogger(CustomEntry.class);
-    private boolean _dummy;
-    public Set<String> get_objectClass() {
-        return _objectClass;
-    }
-    private Set<String> _objectClass = new HashSet<>();
-    public boolean is_dummy() {
-        return _dummy;
-    }
-    public void set_dummy(boolean _dummy) {
-        this._dummy = _dummy;
-        setStyleProperty(ViewStyle.GREYED_OUT);
-    }
-
-    SimpleStringProperty Rdn;
-    public String getRdn() {return Rdn.get();}
-    public SimpleStringProperty rdnProperty() {return Rdn;}
-    public void setRdn(String rdn) {
-        if(Rdn == null) Rdn = new SimpleStringProperty();
-        this.Rdn.set(rdn);
-    }
-
-    SimpleObjectProperty Entry;
-    public com.unboundid.ldap.sdk.Entry getEntry() {
-        if(Entry == null) return null;
-           return (com.unboundid.ldap.sdk.Entry) Entry.get();
-    }
-    public SimpleObjectProperty entryProperty() {return Entry;}
-    public void setEntry(Object entry) {this.Entry.set(entry);}
-
-    SimpleStringProperty Dn;
-    public String getDn() { return Dn.get();}
-    public SimpleStringProperty dnProperty() {return Dn;}
-    public void setDn(String dn) {this.Dn.set(dn);}
-
-    public void set_nrOfChildren(int _nrOfChildren) {
-        this._nrOfChildren = _nrOfChildren;
-    }
-
-    private int _nrOfChildren = 0;
-
-    public enum ViewStyle {
-
+    enum class ViewStyle(var style: String) {
         NEW(" -fx-text-fill: #222222;"),
         GREYED_OUT(" -fx-text-fill: #666666;"),
         ERROR("-fx-text-fill: red;"),
         PERSON("-fx-text-fill: #666666;"),
-        PARENT(" -fx-text-fill: #d60e0e;");
-
-
-        public String style;
-        ViewStyle(String style){
-            this.style = style;
-        }
-
-        public String getStyle() {
-            return style;
-        }
+        PARENT(" -fx-text-fill: #d60e0e;")
     }
 
-    SimpleStringProperty StyleProperty;
-    public String getStyleProperty() {return StyleProperty.get();}
-    public SimpleStringProperty StyleProperty() {return StyleProperty;}
-    public void setStyleProperty(ViewStyle viewStyle)
-    {
-        StyleProperty = new SimpleStringProperty(viewStyle.style);
+    private var _dummy = false
+    private var _nrOfChildren = 0
+
+    var _objectClass: MutableSet<String> = HashSet<String>().apply { add("top") }
+    fun is_dummy(): Boolean {
+        return _dummy
+    }
+    fun setDummy(){
+        _dummy=true
+        setStyleProperty(ViewStyle.GREYED_OUT)
     }
 
-    public void readAllAttributes(Connection connection)
-    {
-        if(Entry.get() != null)
-        {
-            try {
-                 Entry refreshed = connection.getEntry(
-                            (( com.unboundid.ldap.sdk.Entry) Entry.get()).getDN(),new String[] {"*", "+"});
-                    Entry.set(refreshed);
+    fun getEntry(): Entry {
+        return _entry.get() as Entry
+    }
+
+    fun setEntry(entry:Entry) = _entry.set(entry)
+
+    @JvmField
+    var _rdn: SimpleStringProperty = SimpleStringProperty()
+    var _entry = SimpleObjectProperty<Any>()
+    var _dn: SimpleStringProperty = SimpleStringProperty()
+    var _styleProperty: SimpleStringProperty = SimpleStringProperty(ViewStyle.NEW.style)
+    fun setStyleProperty(viewStyle: ViewStyle) {
+        _styleProperty = SimpleStringProperty(viewStyle.style)
+    }
+
+    fun getDn() = _dn.get()
+    fun getRdn() = _rdn.get()
+    fun setRdn(value:String) = _rdn.set(value)
+
+
+    fun readAllAttributes(connection: Connection) {
+        _entry.get()?.let { entry->
+            entry as Entry
+            connection.getEntry(entry.dn,*arrayOf("*", "+"))?.let { refreshed->
+                _entry.set(refreshed)
             }
-            catch (Exception e){
-                logger.error("Error reading entry->" + (( com.unboundid.ldap.sdk.Entry) Entry.get()).getDN(),e);
-            }
         }
     }
 
-    public CustomEntry(String dn)
-    {
-        _objectClass.add("top");
-        Entry = new SimpleObjectProperty();
-        Dn = new SimpleStringProperty(dn);
-        Rdn = new SimpleStringProperty("");
-        StyleProperty = new SimpleStringProperty(ViewStyle.NEW.style);
-    }
-
-    public CustomEntry() {
-        _objectClass.add("top");
-        Entry = new SimpleObjectProperty();
-        Rdn = new SimpleStringProperty("");
-        StyleProperty = new SimpleStringProperty(ViewStyle.NEW.style);
-    }
-
-    @Override
-    public int compareTo(CustomEntry o) {
+    override fun compareTo(o: CustomEntryItem): Int {
         try {
-            return Rdn.get().toLowerCase().compareTo(o.Rdn.get().toLowerCase());
+            return _rdn.get().lowercase(Locale.getDefault()).compareTo(o._rdn.get().lowercase(Locale.getDefault()))
+        } catch (e: Exception) {
+            logger.error(
+                "Exception occured during compareOperation, this rdn->" + _rdn!!.get() + " other->" + o._rdn.get(),
+                e
+            )
         }
-        catch (Exception e)
-        {
-            logger.error("Exception occured during compareOperation, this rdn->" + Rdn.get() + " other->" + o.Rdn.get(),e);
-        }
-        return 0;
+        return 0
     }
 
-    public CustomEntry(com.unboundid.ldap.sdk.Entry entry)
-    {
-        String dn= "ENTRY_NULL";
-        String rdn = "ENTRY_NULL";
-        if(entry != null)
-        {
-            Attribute oClass = entry.getObjectClassAttribute();
-            if(oClass != null)    for(String cl: oClass.getValues()) _objectClass.add(cl.toLowerCase());
-            dn  = entry.getDN();
+    constructor()
+
+    constructor(entry: Entry?) {
+        var dn: String? = "ENTRY_NULL"
+        var rdn = "ENTRY_NULL"
+        if (entry != null) {
+            val oClass = entry.objectClassAttribute
+            if (oClass != null) for (cl in oClass.values) _objectClass.add(cl.lowercase(Locale.getDefault()))
+            dn = entry.dn
             try {
-                rdn = entry.getRDN().toString();
-            }
-            catch (Exception e)
-            {
-                logger.error("Exception",e);
+                rdn = entry.rdn.toString()
+            } catch (e: Exception) {
+                logger.error("Exception", e)
             }
         }
-
-        Dn = new SimpleStringProperty(dn);
-        Entry = new SimpleObjectProperty(entry);
-        Rdn = new SimpleStringProperty(rdn);
-        if(entry != null) StyleProperty = new SimpleStringProperty(ViewStyle.NEW.style);
-        else StyleProperty = new SimpleStringProperty(ViewStyle.ERROR.style);
+        _dn.set(dn)
+        _entry.set(entry)
+        _rdn.set(rdn)
+        _styleProperty.set(if(entry!=null) ViewStyle.NEW.style else ViewStyle.ERROR.style)
     }
 
-    public CustomEntry(String dn, String rdn, List<Attribute> attributes)
-    {
-        for(Attribute attribute: attributes)
-        {
-            if(attribute.getName().equalsIgnoreCase("objectclass"))
-            {
-                _objectClass = (Set<String>) Arrays.stream(attribute.getValues()).collect(Collectors.toSet());
-            }
+    constructor(dn: String?, rdn: String?, attributes: List<Attribute>) {
+
+        dn?.let { _dn.set(it) }
+        rdn?.let { _rdn.set(it) }
+        attributes.find { it.name.equals("objectclass",true) }.let { att->
+             att?.values?.let { values->
+                 _objectClass.addAll(values)
+             }
         }
-        Dn = new SimpleStringProperty(dn);
-        Entry entry = new Entry(dn,attributes);
-        Entry = new SimpleObjectProperty(entry);
-        Rdn = new SimpleStringProperty(rdn);
-        StyleProperty = new SimpleStringProperty(ViewStyle.NEW.style);
+        val entry = Entry(dn, attributes)
+        _entry.set(entry)
+        _styleProperty.set(ViewStyle.NEW.style)
+
     }
 
-    public void setDisplayAttribute(String attributeName)
-    {
-        if(attributeName == null || is_dummy()) return;
-        Attribute value = getEntry().getAttribute(attributeName);
-        if(value != null)
-        {
-            Rdn.setValue(value.getValue());
+    constructor(cn:String){
+        _rdn.set(cn)
+    }
+
+    fun setDisplayAttribute(attributeName: String?) {
+        if (attributeName == null || is_dummy()) return
+        _entry.get()?.let { entry->
+            entry as Entry
+            entry.getAttribute(attributeName)?.let { value->
+                _rdn.set(value.value)
+                return
+            }
         }
-        else
-        {
+        logger.error("could not set display attribute for $attributeName")
+    }
+
+    override fun toString(): String {
+        if (_rdn.get() != null) {
+            return if (_nrOfChildren > 0) _rdn.get() + "[" + _nrOfChildren + "]" else _rdn.get()
+        }
+        if (_dn.get() != null) return _dn.get()
+        if (_entry.get() != null) {
+            val entry = _entry.get() as Entry
             try {
-                RDN rdn = getEntry().getRDN();
-                if(rdn != null)
-                    Rdn.setValue(rdn.toString());
-            }
-            catch (Exception e){
-                logger.error("Exception occured",e);
-            }
-        }
-    }
-
-    @Override
-    public String toString()
-    {
-        if(Rdn.get() != null)
-        {
-            if(_nrOfChildren > 0)  return Rdn.get() + "["+_nrOfChildren+"]"  ;
-            else return Rdn.get();
-        }
-        if(Dn.get() != null) return Dn.get() ;
-        if(Entry.get() != null)
-        {
-            com.unboundid.ldap.sdk.Entry entry = (com.unboundid.ldap.sdk.Entry) Entry.get();
-            try {
-                if(entry.getRDN() != null)
-                {
-                    if(_nrOfChildren > 0)   return entry.getRDN().toString() + "["+_nrOfChildren+"]";
-                    else return entry.getRDN().toString();
+                if (entry.rdn != null) {
+                    return if (_nrOfChildren > 0) entry.rdn.toString() + "[" + _nrOfChildren + "]" else entry.rdn.toString()
                 }
+            } catch (e: Exception) {
             }
-            catch (Exception e){}
-            if(entry.getDN() != null) return entry.getDN() ;
+            if (entry.dn != null) return entry.dn
         }
-        return this.toString() ;
+        return this.toString()
     }
-    public String[] splitDN()
-    {
-        return Dn.get().split(",");
+
+    fun splitDN(): Array<String> {
+        return _dn.get().split(",".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
+    }
+
+    companion object {
+        var logger = LogManager.getLogger(CustomEntryItem::class.java)
     }
 }
