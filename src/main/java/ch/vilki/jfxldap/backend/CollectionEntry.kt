@@ -1,238 +1,224 @@
-package ch.vilki.jfxldap.backend;
+package ch.vilki.jfxldap.backend
 
-import com.unboundid.ldap.sdk.Entry;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleListProperty;
-import javafx.beans.property.SimpleStringProperty;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.unboundid.ldap.sdk.Entry
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleListProperty
+import javafx.beans.property.SimpleStringProperty
+import javafx.collections.FXCollections
+import javafx.collections.ObservableList
+import org.apache.logging.log4j.LogManager
+import java.util.*
+import java.util.stream.Collectors
 
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-public class CollectionEntry extends CustomEntryItem {
-    static Logger logger = LogManager.getLogger(CollectionEntry.class);
-
-    public static String IGNORE = "IGNORE";
-    public static String EXPORT_ONLY = "EXPORT_ONLY";
-    public static String NONE = "NONE";
-
-    SimpleBooleanProperty Subtree;
-
-    public boolean isSubtree() {
-        return Subtree.get();
+class CollectionEntry : CustomEntryItem {
+    var Subtree: SimpleBooleanProperty
+    fun isSubtree(): Boolean {
+        return Subtree.get()
     }
 
-    public SimpleBooleanProperty subtreeProperty() {
-        return Subtree;
+    fun subtreeProperty(): SimpleBooleanProperty {
+        return Subtree
     }
 
-    public void setSubtree(boolean subtree) {
-        this.Subtree.set(subtree);
+    fun setSubtree(subtree: Boolean) {
+        Subtree.set(subtree)
     }
 
-    SimpleBooleanProperty OverwriteEntry;
-
-    public boolean getOverwriteEntry() {
-        return OverwriteEntry.get();
+    var _overWriteEntry: SimpleBooleanProperty
+    fun getOverwriteEntry(): Boolean {
+        return _overWriteEntry.get()
     }
 
-    public SimpleBooleanProperty overwriteEntryProperty() {
-        return OverwriteEntry;
+    fun overwriteEntryProperty(): SimpleBooleanProperty {
+        return _overWriteEntry
     }
 
-    public void setOverwriteEntry(boolean overwriteEntry) {
-        this.OverwriteEntry.set(overwriteEntry);
+    fun setOverwriteEntry(overwriteEntry: Boolean) {
+        _overWriteEntry.set(overwriteEntry)
     }
 
-    SimpleBooleanProperty ExportRoot;
-
-    public boolean getExportRoot() {
-        return ExportRoot.get();
+    var ExportRoot: SimpleBooleanProperty
+    fun getExportRoot(): Boolean {
+        return ExportRoot.get()
     }
 
-    public SimpleBooleanProperty exportRootEntryProperty() {
-        return ExportRoot;
+    fun exportRootEntryProperty(): SimpleBooleanProperty {
+        return ExportRoot
     }
 
-    public void setExportRoot(boolean exportRoot) {
-        this.ExportRoot.set(exportRoot);
+    fun setExportRoot(exportRoot: Boolean) {
+        ExportRoot.set(exportRoot)
     }
 
-    SimpleStringProperty AttributesAction;
-
-    public String getAttributesAction() {
-        return AttributesAction.get();
+    @JvmField
+    var AttributesAction: SimpleStringProperty
+    fun getAttributesAction(): String {
+        return AttributesAction.get()
     }
 
-    public SimpleStringProperty attributesActionProperty() {
-        return AttributesAction;
+    fun attributesActionProperty(): SimpleStringProperty {
+        return AttributesAction
     }
 
-    public void setAttributesAction(Boolean ignore) {
-        if (ignore == null) this.AttributesAction.set(NONE);
-        else {
-            if (ignore) this.AttributesAction.set(IGNORE);
-            else this.AttributesAction.set(EXPORT_ONLY);
+    fun setAttributesAction(ignore: Boolean?) {
+        if (ignore == null) AttributesAction.set(NONE) else {
+            if (ignore) AttributesAction.set(IGNORE) else AttributesAction.set(EXPORT_ONLY)
         }
     }
 
-    public void setAttributesAction(String action) {
-        AttributesAction.set(action);
+    fun setAttributesAction(action: String?) {
+        AttributesAction.set(action)
     }
 
-    SimpleListProperty<String> Attributes;
-
-    public String getAttributes() {
-        if (Attributes.get() == null) return "";
-        StringBuilder builder = new StringBuilder();
-
-        Attributes.get().stream().forEach(c -> {
-            builder.append(c);
-            builder.append(",");
-        });
-        if (builder.length() > 0) builder.deleteCharAt(builder.length() - 1);
-        return builder.toString();
+    var _attributes: SimpleListProperty<String>
+    fun getAttributes(): String {
+        if (_attributes.get() == null) return ""
+        val builder = StringBuilder()
+        _attributes.get().stream().forEach { c: String? ->
+            builder.append(c)
+            builder.append(",")
+        }
+        if (builder.length > 0) builder.deleteCharAt(builder.length - 1)
+        return builder.toString()
     }
 
-    public Set<String> getAttributesAsSet() {
-        return Attributes.stream().map(String::toLowerCase).collect(Collectors.toSet());
+    val attributesAsSet: Set<String>
+        get() = _attributes.stream().map { obj: String -> obj.lowercase(Locale.getDefault()) }
+            .collect(Collectors.toSet())
+
+    fun attributesProperty(): SimpleListProperty<String> {
+        return _attributes
     }
 
-    public SimpleListProperty<String> attributesProperty() {
-        return Attributes;
+    fun setAttributes(attributes: ObservableList<String>?) {
+        if (attributes == null) _attributes.clear()
+        _attributes.set(attributes)
     }
 
-    public void setAttributes(ObservableList<String> attributes) {
-        if (attributes == null) this.Attributes.clear();
-        this.Attributes.set(attributes);
+    fun setAttributes(attributes: List<String>?) {
+        _attributes.clear()
+        _attributes.addAll(attributes!!)
     }
 
-    public void setAttributes(List<String> attributes) {
-        this.Attributes.clear();
-        this.Attributes.addAll(attributes);
-
+    fun getLdapFilter(): String {
+        return LdapFilter.get()
     }
 
-    public String getLdapFilter() {
-        return LdapFilter.get();
+    fun ldapFilterProperty(): SimpleStringProperty {
+        return LdapFilter
     }
 
-    public SimpleStringProperty ldapFilterProperty() {
-        return LdapFilter;
+    fun setLdapFilter(ldapFilter: String?) {
+        LdapFilter.set(ldapFilter)
     }
 
-    public void setLdapFilter(String ldapFilter) {
-        this.LdapFilter.set(ldapFilter);
+    @JvmField
+    var LdapFilter: SimpleStringProperty
+    var Selected: SimpleBooleanProperty
+    fun isSelected(): Boolean {
+        return Selected.get()
     }
 
-    SimpleStringProperty LdapFilter;
-
-
-    SimpleBooleanProperty Selected;
-
-    public boolean isSelected() {
-        return Selected.get();
+    fun selectedProperty(): SimpleBooleanProperty {
+        return Selected
     }
 
-    public SimpleBooleanProperty selectedProperty() {
-        return Selected;
+    fun setSelected(Selected: Boolean) {
+        this.Selected.set(Selected)
     }
 
-    public void setSelected(boolean Selected) {
-        this.Selected.set(Selected);
+    var ParentSelected: SimpleBooleanProperty
+    fun isParentSelected(): Boolean {
+        return ParentSelected.get()
     }
 
-    SimpleBooleanProperty ParentSelected;
-
-    public boolean isParentSelected() {
-        return ParentSelected.get();
+    fun parentSelectedProperty(): SimpleBooleanProperty {
+        return ParentSelected
     }
 
-    public SimpleBooleanProperty parentSelectedProperty() {
-        return ParentSelected;
+    fun setParentSelected(ParentSelected: Boolean) {
+        this.ParentSelected.set(ParentSelected)
     }
 
-    public void setParentSelected(boolean ParentSelected) {
-        this.ParentSelected.set(ParentSelected);
+    var _displayDN: SimpleStringProperty?
+    fun getDisplayDN(): String {
+        return if (_displayDN == null || _displayDN!!.get() == null) "" else _displayDN!!.get()
     }
 
-    SimpleStringProperty DisplayDN;
-
-    public String getDisplayDN() {
-        if (DisplayDN == null || DisplayDN.get() == null) return "";
-        return DisplayDN.get();
+    fun displayDNProperty(): SimpleStringProperty? {
+        return _displayDN
     }
 
-    public SimpleStringProperty displayDNProperty() {
-        return DisplayDN;
+    fun setDisplayDN(DisplayDN: String?) {
+        this._displayDN!!.set(DisplayDN)
     }
 
-    public void setDisplayDN(String DisplayDN) {
-        this.DisplayDN.set(DisplayDN);
+    constructor(
+        dn: String?, subtree: Boolean, deleteTarget: Boolean,
+        attributes: List<String>?, filterAction: String?, ldapFilter: String?, displayDN: String?
+    ) {
+        _dn.set(dn)
+        Subtree = SimpleBooleanProperty(subtree)
+        _overWriteEntry = SimpleBooleanProperty(deleteTarget)
+        val l = FXCollections.observableArrayList<String>()
+        l.addAll(attributes!!)
+        _attributes = SimpleListProperty(l)
+        _attributes.set(l)
+        AttributesAction = SimpleStringProperty(filterAction)
+        LdapFilter = SimpleStringProperty(ldapFilter)
+        Selected = SimpleBooleanProperty(false)
+        _displayDN = SimpleStringProperty(displayDN)
+        ParentSelected = SimpleBooleanProperty(false)
+        ExportRoot = SimpleBooleanProperty(false)
     }
 
-    public CollectionEntry(String dn, boolean subtree, boolean deleteTarget,
-                           List<String> attributes, String filterAction, String ldapFilter, String displayDN) {
-        get_dn().set(dn);
-        Subtree = new SimpleBooleanProperty(subtree);
-        OverwriteEntry = new SimpleBooleanProperty(deleteTarget);
-        ObservableList<String> l = FXCollections.observableArrayList();
-        l.addAll(attributes);
-        Attributes = new SimpleListProperty<>(l);
-        Attributes.set(l);
-        AttributesAction = new SimpleStringProperty(filterAction);
-        LdapFilter = new SimpleStringProperty(ldapFilter);
-        Selected = new SimpleBooleanProperty(false);
-        DisplayDN = new SimpleStringProperty(displayDN);
-        ParentSelected = new SimpleBooleanProperty(false);
-        ExportRoot = new SimpleBooleanProperty(false);
+    constructor(entry: Entry?) : super(entry) {
+        Subtree = SimpleBooleanProperty(false)
+        _overWriteEntry = SimpleBooleanProperty(false)
+        val l = FXCollections.observableArrayList<String>()
+        _attributes = SimpleListProperty(l)
+        _attributes.set(l)
+        AttributesAction = SimpleStringProperty(NONE)
+        _attributes.set(FXCollections.observableArrayList())
+        LdapFilter = SimpleStringProperty()
+        Selected = SimpleBooleanProperty(false)
+        _displayDN = SimpleStringProperty()
+        ParentSelected = SimpleBooleanProperty(false)
+        ExportRoot = SimpleBooleanProperty(false)
     }
 
-    public CollectionEntry(Entry entry) {
-        super(entry);
-        Subtree = new SimpleBooleanProperty(false);
-        OverwriteEntry = new SimpleBooleanProperty(false);
-        ObservableList<String> l = FXCollections.observableArrayList();
-        Attributes = new SimpleListProperty<>(l);
-        Attributes.set(l);
-        AttributesAction = new SimpleStringProperty(NONE);
-        Attributes.set(FXCollections.observableArrayList());
-        LdapFilter = new SimpleStringProperty();
-        Selected = new SimpleBooleanProperty(false);
-        DisplayDN = new SimpleStringProperty();
-        ParentSelected = new SimpleBooleanProperty(false);
-        ExportRoot = new SimpleBooleanProperty(false);
+    fun update(collectionEntry: CollectionEntry) {
+        Subtree.set(collectionEntry.isSubtree())
+        _overWriteEntry.set(collectionEntry.getOverwriteEntry())
+        _attributes.set(collectionEntry._attributes)
+        AttributesAction.set(collectionEntry.getAttributesAction())
+        LdapFilter.set(collectionEntry.getLdapFilter())
+        Selected.set(collectionEntry.isSelected())
+        ParentSelected.set(collectionEntry.isParentSelected())
     }
 
-    public void update(CollectionEntry collectionEntry) {
-        Subtree.set(collectionEntry.isSubtree());
-        OverwriteEntry.set(collectionEntry.getOverwriteEntry());
-        Attributes.set(collectionEntry.Attributes);
-        AttributesAction.set(collectionEntry.getAttributesAction());
-        LdapFilter.set(collectionEntry.getLdapFilter());
-        Selected.set(collectionEntry.isSelected());
-        ParentSelected.set(collectionEntry.isParentSelected());
+    val description: String
+        get() {
+            val stringBuilder = StringBuilder()
+            stringBuilder.append("[DN=")
+            stringBuilder.append(_dn)
+            stringBuilder.append("]")
+            stringBuilder.append("[OverwriteEntry=")
+            stringBuilder.append(_overWriteEntry)
+            stringBuilder.append("]")
+            return stringBuilder.toString()
+        }
+
+    override fun toString(): String {
+        return _rdn.get()
     }
 
-    public String getDescription() {
-        StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append("[DN=");
-        stringBuilder.append(get_dn());
-        stringBuilder.append("]");
-
-        stringBuilder.append("[OverwriteEntry=");
-        stringBuilder.append(this.OverwriteEntry);
-        stringBuilder.append("]");
-        return stringBuilder.toString();
-
+    companion object {
+        var logger = LogManager.getLogger(CollectionEntry::class.java)
+        @JvmField
+        var IGNORE = "IGNORE"
+        @JvmField
+        var EXPORT_ONLY = "EXPORT_ONLY"
+        var NONE = "NONE"
     }
-
-    public String toString() {
-        return _rdn.get();
-    }
-
 }

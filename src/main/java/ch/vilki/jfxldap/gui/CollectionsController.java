@@ -162,9 +162,9 @@ public class CollectionsController implements IProgress, ILoader {
                 } else {
                     Boolean action = null;
                     selectedItem.getValue().setAttributesAction(action);
-                    selectedItem.getValue().setAttributes(null);
+                    selectedItem.getValue().set_attributes(null);
                     tableItem.setAttributesAction(action);
-                    tableItem.setAttributes(null);
+                    tableItem.set_attributes(null);
 
                 }
                 selectedItem.getValue().setLdapFilter(_filterWindowController._textFieldSourceFilter.getText());

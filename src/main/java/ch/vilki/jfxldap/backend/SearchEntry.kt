@@ -1,10 +1,8 @@
 package ch.vilki.jfxldap.backend
 
 import com.unboundid.ldap.sdk.Entry
-import javafx.beans.property.BooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleListProperty
-import javafx.beans.property.StringProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import java.util.*
@@ -16,17 +14,17 @@ class SearchEntry : CustomEntryItem {
 
     public fun setChildrenFound(found:Boolean) = ChildrenFound.set(found)
     @JvmField
-    var FoundInAttributes: SimpleListProperty<String>? = null
+    var _foundInAttributes: SimpleListProperty<String>? = null
     fun getFoundInAttributes(): ObservableList<String> {
-        return FoundInAttributes!!.get()
+        return _foundInAttributes!!.get()
     }
 
     fun FoundInAttributesProperty(): SimpleListProperty<String>? {
-        return FoundInAttributes
+        return _foundInAttributes
     }
 
     fun setFoundInAttributes(attributes: ObservableList<String>?) {
-        FoundInAttributes!!.set(attributes)
+        _foundInAttributes!!.set(attributes)
     }
 
     constructor(
@@ -66,7 +64,7 @@ class SearchEntry : CustomEntryItem {
                 }
             }
         }
-        FoundInAttributes = if (notContains) // we are looking for entries which do not have value searched for
+        _foundInAttributes = if (notContains) // we are looking for entries which do not have value searched for
         {
             if (!foundInAttributes.isEmpty()) // value found in some attributes, we are not intressted for this entry
             {
@@ -121,7 +119,7 @@ class SearchEntry : CustomEntryItem {
                 }
             }
         }
-        FoundInAttributes = if (!foundInAttributes.isEmpty()) {
+        _foundInAttributes = if (!foundInAttributes.isEmpty()) {
             val l = FXCollections.observableArrayList<String>()
             l.addAll(foundInAttributes)
             SimpleListProperty(l)

@@ -342,7 +342,7 @@ public class SearchTree extends TreeView<SearchEntry> {
             }
             if (treeItem.getValue().ValueFound.get()) {
                 ArrayList<Modification> modifications = new ArrayList<Modification>();
-                for (String attName : treeItem.getValue().FoundInAttributes) {
+                for (String attName : treeItem.getValue()._foundInAttributes) {
                     Collection<Attribute> attributes = treeItem.getValue().getEntry().getAttributes();
                     for (Attribute attribute : attributes) {
                         if (attribute.getName().equalsIgnoreCase(attName)) {
@@ -407,7 +407,7 @@ public class SearchTree extends TreeView<SearchEntry> {
     public void replaceAllStringOccurencies(TreeItem<SearchEntry> entry, String original, String replacement, Connection ldapConnection, List<ModifyRequest> modifyRequests) throws Exception {
         if (entry.getValue().ValueFound.get()) {
             ArrayList<Modification> modifications = new ArrayList<Modification>();
-            for (String attName : entry.getValue().FoundInAttributes) {
+            for (String attName : entry.getValue()._foundInAttributes) {
                 Collection<Attribute> attributes = entry.getValue().getEntry().getAttributes();
                 for (Attribute attribute : attributes) {
                     if (attribute.getName().equalsIgnoreCase(attName)) {
