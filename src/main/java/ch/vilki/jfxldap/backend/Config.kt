@@ -1,361 +1,353 @@
-package ch.vilki.jfxldap.backend;
+package ch.vilki.jfxldap.backend
 
-import ch.vilki.secured.SecStorage;
-import ch.vilki.secured.SecureProperty;
-import ch.vilki.secured.SecureStorageException;
-import ch.vilki.secured.SecureString;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import ch.vilki.secured.SecStorage
+import ch.vilki.secured.SecureStorageException
+import ch.vilki.secured.SecureString
+import org.apache.logging.log4j.LogManager
+import org.bouncycastle.jce.provider.BouncyCastleProvider
+import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.security.KeyStore
+import java.security.KeyStoreException
+import java.security.NoSuchAlgorithmException
+import java.security.Security
+import java.security.cert.CertificateException
+import java.security.spec.InvalidKeySpecException
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.Security;
-import java.security.cert.CertificateException;
-import java.security.spec.InvalidKeySpecException;
-import java.util.*;
+class Config {
+    @JvmField
+    var _allAttributes: Set<String> = HashSet()
+    var _ignoreAttributes: Set<String> = HashSet()
+    var _secStorage: SecStorage? = null
+    @JvmField
+    var _connections: MutableMap<String, Connection> = HashMap()
+    private var _tempDir: String? = null
+    private var _beyondCompareExe: String? = null
+    private var _visualCodeExe: String? = null
+    private var _lastUsedDirectory: String? = null
+    private var _configSecured = false
+    private var _keyStoreFile: String? = null
+    private var _keyStore: KeyStore? = null
+    private var _keyStorePassword: SecureString? = null
 
-
-public class Config {
-
-    public static String PASSWORD_SET="***";
-    public static String PASSWORD_NOT_SET="NO_PASSWORD";
-
-    static Logger logger = LogManager.getLogger(Config.class);
-    public Set<String> _allAttributes = new HashSet<String>();
-    public Set<String> _ignoreAttributes = new HashSet<String>();
-    SecStorage _secStorage = null;
-    public Map<String,Connection> _connections = new HashMap<>();
-    private String _tempDir;
-    private String _beyondCompareExe;
-    private String _visualCodeExe;
-    private String _lastUsedDirectory;
-    private boolean _configSecured = false;
-    private String _keyStoreFile = null;
-    private KeyStore _keyStore = null;
-    private SecureString _keyStorePassword = null;
-
-    public static String getConfigurationFile()
-    {
-        if(Files.exists(Paths.get(System.getProperty("user.home") + "//fxldap_cfg.properties")))
-        {
-           return  System.getProperty("user.home") + "//fxldap_cfg.properties";
-        }
-        else return System.getProperty("user.home") + "//fxldap_cfg.json";
+    fun is_configSecured(): Boolean {
+        return _configSecured
     }
 
-
-    public SecStorage get_secStorage() {
-        return _secStorage;
-    }
-       public boolean is_configSecured() {
-        return _configSecured;
-    }
-    public KeyStore get_keyStore() {
-        return _keyStore;
+    fun get_keyStore(): KeyStore? {
+        return _keyStore
     }
 
-    public String get_tempDir() {
-        if(_tempDir == null) _tempDir = _secStorage.getPropStringValue("general@@_tempDir");
-        return _tempDir;
+    fun get_tempDir(): String? {
+        if (_tempDir == null) _tempDir = _secStorage!!.getPropStringValue("general@@_tempDir")
+        return _tempDir
     }
 
-    public void set_tempDir(String _tempDir) {
-        this._tempDir = _tempDir;
-        try{_secStorage.addUnsecuredProperty("general@@_tempDir",_tempDir);}catch (Exception e)
-        {logger.error("Error adding property",e);}
-    }
-
-    public String get_beyondCompareExe() {
-        if(_beyondCompareExe == null) _beyondCompareExe = _secStorage.getPropStringValue("general@@_beyondCompareExe");
-        return _beyondCompareExe;
-    }
-
-    public void set_beyondCompareExe(String _beyondCompareExe) {
-        this._beyondCompareExe = _beyondCompareExe;
-        try{_secStorage.addUnsecuredProperty("general@@_beyondCompareExe",_beyondCompareExe);}
-        catch (Exception e){logger.error("Error adding property",e);}
-    }
-    public String get_visualCodeExe() {
-        if(_visualCodeExe == null) _visualCodeExe = _secStorage.getPropStringValue("general@@_visualCodeExe");
-        return _visualCodeExe;
-    }
-
-    public void set_visualCodeExe(String visualCodeExe) {
-        _visualCodeExe = visualCodeExe;
-        try{_secStorage.addUnsecuredProperty("general@@_visualCodeExe",_visualCodeExe);}
-        catch (Exception e){logger.error("Error adding property",e);}
-    }
-
-
-    public String get_lastUsedDirectory() {
-        if(_lastUsedDirectory == null)
-        {
-            _lastUsedDirectory = _secStorage.getPropStringValue("general@@_lastUsedDirectory");
-            if(_lastUsedDirectory != null)
-            {
-                if(!Files.exists(Paths.get(_lastUsedDirectory)))
-                {
-                    _lastUsedDirectory = System.getProperty("user.home");
-                }
-            }
-            else
-            {
-                _lastUsedDirectory = System.getProperty("user.home");
-            }
-        }
-        return _lastUsedDirectory;
-    }
-
-    public void set_lastUsedDirectory(String _lastUsedDirectory) {
-        this._lastUsedDirectory = _lastUsedDirectory;
-        try{_secStorage.addUnsecuredProperty("general@@_lastUsedDirectory",_lastUsedDirectory);}
-        catch (Exception e){logger.error("Error adding property",e);}
-    }
-
-    public String get_keyStoreFile() {
-        return _keyStoreFile;
-    }
-
-    public void set_keyStorePassword(SecureString keyStorePassword) {
-        this._keyStorePassword = keyStorePassword;
-        try{_secStorage.addSecuredProperty("general@@_keyStorePassword",_keyStorePassword);}
-        catch (Exception e){logger.error("Error adding property",e);}
-    }
-
-
-    public SecureString get_keyStorePassword()
-    {
-        return _secStorage.getPropValue("general@@_keyStorePassword");
-    }
-
-    public void set_keyStoreFile(String _keyStoreFile) {
-        this._keyStoreFile = _keyStoreFile;
-        if(_keyStoreFile == null)
-            try{_secStorage.deleteProperty("general@@_keystorefile");}
-        catch (Exception e){logger.error("Error deleting property",e);}
-        else
-            try{_secStorage.addUnsecuredProperty("general@@_keystorefile",_keyStoreFile);}
-            catch (Exception e){logger.error("Error adding property",e);}
-    }
-
-    public String openConfiguration(String fileName) throws Exception {
-        Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
-        if(!Files.exists(Paths.get(fileName))) return Errors.FILE_NOT_FOUND;
-        if(!SecStorage.isWindowsSecured(fileName) && SecStorage.isSecured(fileName))
-        {
-            return Errors.MASTER_PASSWORD_SECURED_ONLY;
-        }
-        if(!SecStorage.isSecured(fileName))
-        {
-            _secStorage = SecStorage.open_SecuredStorage(fileName,false);
-            _configSecured = false;
-        }
-        else
-        {
-            if(!SecStorage.isSecuredWithCurrentUser(fileName))
-            {
-                return Errors.WINDOWS_NOT_SECURED_WITH_CURRENT_USER;
-            }
-            else
-            {
-                _secStorage = SecStorage.open_SecuredStorage(fileName,true);
-            }
-            _configSecured = true;
-        }
-         readConnections();
-        _keyStoreFile = _secStorage.getPropStringValue("general@@_keystorefile");
-        if(_keyStore == null)
-        {
-            if(_keyStoreFile == null || !Files.exists(Paths.get(_keyStoreFile)))
-            {
-                set_keyStoreFile(null);
-                return "kestore file does not exist";
-            }
-            if(_configSecured) readKeyStoreFile(null);
-            else logger.warn("Keystore file is configured but config is not secured, can not read keystore");
-        }
-        return null;
-    }
-
-    public void readKeyStoreFile(SecureString password) throws IOException, KeyStoreException, CertificateException,
-            NoSuchAlgorithmException, SecureStorageException {
-        SecureString pass = null;
-        if(password != null) pass = password;
-        FileInputStream fileInputStream = new FileInputStream(new File(_keyStoreFile));
-        _keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        if(pass == null)
-        {
-            pass = get_keyStorePassword();
-            if(pass == null) throw new SecureStorageException("No password provided for keystore and not found in config");
-        }
-        else
-        {
-            set_keyStorePassword(pass);
-        }
-        _keyStore.load(fileInputStream, pass.get_value());
-    }
-
-    public void createKeyStoreFile(SecureString password, File file) throws KeyStoreException, CertificateException,
-            NoSuchAlgorithmException, IOException {
-        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-        keyStore.load(null);
-        FileOutputStream fileOutputStream = new FileOutputStream(file);
-        keyStore.store(fileOutputStream,password.get_value());
-        password.destroyValue();
-        fileOutputStream.close();
-    }
-
-    public void saveKeyStoreFile() throws IOException, CertificateException, NoSuchAlgorithmException, KeyStoreException {
-        FileOutputStream fileOutputStream = new FileOutputStream(_keyStoreFile);
-        SecureString pass = get_keyStorePassword();
-       _keyStore.store(fileOutputStream,pass.get_value());
-        pass.destroyValue();
-    }
-
-    public void createConfigurationFile(String fileName,String password) throws NoSuchAlgorithmException,
-            InvalidKeySpecException, SecureStorageException, IOException {
-        if(password == null)
-        {
-            SecStorage.createNewSecureStorage(fileName,null,false);
-        }
-        else
-        {
-            SecStorage.createNewSecureStorage(fileName,new SecureString(password),true);
-        }
-    }
-
-    public String openConfiguration(String fileName, SecureString masterPassword) throws Exception {
-        if(masterPassword == null || masterPassword.get_value() == null)
-        {
-            _secStorage = SecStorage.open_SecuredStorage(fileName,false);
-            readConnections();
-            return null;
-        }
-       _secStorage = SecStorage.open_SecuredStorage(fileName,masterPassword);
-       if(masterPassword.get_value() != null)
-       {
-           if(!SecStorage.isPasswordCorrect(fileName,masterPassword)) return Errors.PASSWORD_ERROR;
-           else
-           {
-               _secStorage = SecStorage.open_SecuredStorage(fileName,masterPassword);
-               readConnections();
-               _configSecured=true;
-               return null;
-           }
-       }
-       else
-       {
-           _secStorage = SecStorage.open_SecuredStorage(fileName,masterPassword);
-           readConnections();
-           _configSecured=true;
-           return null;
-       }
-    }
-
-    private void readConnections()
-    {
-        Connection.set_config(this);
-        Set<String> allConnections = _secStorage.getAllChildLabels("connection");
-        for(String connectionK: allConnections)
-        {
-            Map<String, String> map = _secStorage.getAllPropertiesAsMap(connectionK);
-            Connection connection = new Connection(this);
-            connection.setName(map.get("name"));
-            connection.setServer(map.get("server"));
-            connection.setPort(map.get("port"));
-            connection.setUser(map.get("user"));
-            connection.setBaseDN(map.get("basedn"));
-            connection.setDisplayAttribute(map.get("displayattribute"));
-            connection.setTag(map.get("tag"));
-            if(map.containsKey("password") && map.get("password")!=null) connection.setPassword(PASSWORD_SET);
-            if(map.get("usejndi") != null && map.get("usejndi").equalsIgnoreCase("true"))
-                connection.setUseJNDI(true);
-            else connection.setUseJNDI(false);
-            if(map.get("readonly") != null && map.get("readonly").equalsIgnoreCase("true"))
-                connection.set_readOnly(true);
-            else connection.set_readOnly(false);
-            if(map.get("ssl") != null && map.get("ssl").equalsIgnoreCase("true")) connection.setSSL(true);
-            else connection.setSSL(false);
-            _connections.put(connection.getName(),connection);
-        }
-   }
-
-    public Connection getConnection(String connectionName)
-    {
-        return _connections.get(connectionName);
-    }
-    public void saveConnections()
-    {
-        try
-        {
-            for(String k: _connections.keySet())
-            {
-                Connection con = _connections.get(k);
-                String label = "connection@@" + con.getName() + "@@";
-                _secStorage.addUnsecuredProperty(label +"name",con.getName());
-                _secStorage.addUnsecuredProperty(label + "server",con.getServer());
-                _secStorage.addUnsecuredProperty(label + "port",con.getPort());
-                _secStorage.addUnsecuredProperty(label + "user",con.getUser());
-                _secStorage.addUnsecuredProperty(label + "basedn",con.getBaseDN());
-                _secStorage.addUnsecuredProperty(label + "displayattribute",con.getDisplayAttribute());
-                _secStorage.addUnsecuredProperty(label + "usejndi",String.valueOf(con.isUseJNDI()));
-                _secStorage.addUnsecuredProperty(label + "readonly",String.valueOf(con.is_readOnly()));
-                _secStorage.addUnsecuredProperty(label + "ssl",String.valueOf(con.isSSL()));
-                _secStorage.addUnsecuredProperty(label + "tag",con.getTag());
-            }
-        }
-        catch (Exception e)
-        {
-            logger.error("Save connections exception occured",e);
-        }
-    }
-
-    public void deleteConnection(String connName) throws IOException {
-        String propKey = "connection@@" + connName;
-        List<SecureProperty> allProps = _secStorage.getAllProperties(propKey);
-        for(SecureProperty secureProperty: allProps)
-        {
-            _secStorage.deleteProperty(secureProperty);
-        }
-     }
-
-    public void updateConnection(Connection con) throws Exception {
-
-        String label = "connection@@" + con.getName() + "@@";
-        _secStorage.addUnsecuredProperty(label +"name",con.getName());
-        _secStorage.addUnsecuredProperty(label + "server",con.getServer());
-        _secStorage.addUnsecuredProperty(label + "port",con.getPort());
-        _secStorage.addUnsecuredProperty(label + "user",con.getUser());
-        _secStorage.addUnsecuredProperty(label + "basedn",con.getBaseDN());
-        _secStorage.addUnsecuredProperty(label + "displayattribute",con.getDisplayAttribute());
-        _secStorage.addUnsecuredProperty(label + "usejndi",String.valueOf(con.isUseJNDI()));
-        _secStorage.addUnsecuredProperty(label + "readonly",String.valueOf(con.is_readOnly()));
-        _secStorage.addUnsecuredProperty(label + "readonly",String.valueOf(con.isSSL()));
-        _secStorage.addUnsecuredProperty(label + "tag",con.getTag());
-
-
-    }
-    public SecureString getConnectionPassword(Connection con)  {
-
+    fun set_tempDir(_tempDir: String?) {
+        this._tempDir = _tempDir
         try {
-            SecureString secureString = _secStorage.getPropValue("connection@@" + con.getName() + "@@password");
-            return secureString;
-        } catch (Exception e) {
-            logger.error("error reading password",e);
-            return null;
+            _secStorage!!.addUnsecuredProperty("general@@_tempDir", _tempDir)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
         }
     }
 
-    public void updatePassword(Connection con,SecureString password) throws SecureStorageException {
-        if(_configSecured) _secStorage.addSecuredProperty("connection@@" + con.getName() + "@@password",password);
-        else _secStorage.addUnsecuredProperty("connection@@" + con.getName() + "@@password",password.toString());
+    fun get_beyondCompareExe(): String? {
+        if (_beyondCompareExe == null) _beyondCompareExe =
+            _secStorage!!.getPropStringValue("general@@_beyondCompareExe")
+        return _beyondCompareExe
     }
 
+    fun set_beyondCompareExe(_beyondCompareExe: String?) {
+        this._beyondCompareExe = _beyondCompareExe
+        try {
+            _secStorage!!.addUnsecuredProperty("general@@_beyondCompareExe", _beyondCompareExe)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    fun get_visualCodeExe(): String? {
+        if (_visualCodeExe == null) _visualCodeExe = _secStorage!!.getPropStringValue("general@@_visualCodeExe")
+        return _visualCodeExe
+    }
+
+    fun set_visualCodeExe(visualCodeExe: String?) {
+        _visualCodeExe = visualCodeExe
+        try {
+            _secStorage!!.addUnsecuredProperty("general@@_visualCodeExe", _visualCodeExe)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    fun get_lastUsedDirectory(): String? {
+        if (_lastUsedDirectory == null) {
+            _lastUsedDirectory = _secStorage!!.getPropStringValue("general@@_lastUsedDirectory")
+            if (_lastUsedDirectory != null) {
+                if (!Files.exists(Paths.get(_lastUsedDirectory))) {
+                    _lastUsedDirectory = System.getProperty("user.home")
+                }
+            } else {
+                _lastUsedDirectory = System.getProperty("user.home")
+            }
+        }
+        return _lastUsedDirectory
+    }
+
+    fun set_lastUsedDirectory(_lastUsedDirectory: String?) {
+        this._lastUsedDirectory = _lastUsedDirectory
+        try {
+            _secStorage!!.addUnsecuredProperty("general@@_lastUsedDirectory", _lastUsedDirectory)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    fun get_keyStoreFile(): String? {
+        return _keyStoreFile
+    }
+
+    fun set_keyStorePassword(keyStorePassword: SecureString?) {
+        _keyStorePassword = keyStorePassword
+        try {
+            _secStorage!!.addSecuredProperty("general@@_keyStorePassword", _keyStorePassword)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    fun get_keyStorePassword(): SecureString {
+        return _secStorage!!.getPropValue("general@@_keyStorePassword")
+    }
+
+    fun set_keyStoreFile(_keyStoreFile: String?) {
+        this._keyStoreFile = _keyStoreFile
+        if (_keyStoreFile == null) try {
+            _secStorage!!.deleteProperty("general@@_keystorefile")
+        } catch (e: Exception) {
+            logger.error("Error deleting property", e)
+        } else try {
+            _secStorage!!.addUnsecuredProperty("general@@_keystorefile", _keyStoreFile)
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    @Throws(Exception::class)
+    fun openConfiguration(fileName: String?): String? {
+        Security.addProvider(BouncyCastleProvider())
+        if (!Files.exists(Paths.get(fileName))) return Errors.FILE_NOT_FOUND
+        if (!SecStorage.isWindowsSecured(fileName) && SecStorage.isSecured(fileName)) {
+            return Errors.MASTER_PASSWORD_SECURED_ONLY
+        }
+        if (!SecStorage.isSecured(fileName)) {
+            _secStorage = SecStorage.open_SecuredStorage(fileName, false)
+            _configSecured = false
+        } else {
+            _secStorage = if (!SecStorage.isSecuredWithCurrentUser(fileName)) {
+                return Errors.WINDOWS_NOT_SECURED_WITH_CURRENT_USER
+            } else {
+                SecStorage.open_SecuredStorage(fileName, true)
+            }
+            _configSecured = true
+        }
+        readConnections()
+        _keyStoreFile = _secStorage!!.getPropStringValue("general@@_keystorefile")
+        if (_keyStore == null) {
+            if (_keyStoreFile == null || !Files.exists(Paths.get(_keyStoreFile))) {
+                set_keyStoreFile(null)
+                return "kestore file does not exist"
+            }
+            if (_configSecured) readKeyStoreFile(null) else logger.warn("Keystore file is configured but config is not secured, can not read keystore")
+        }
+        return null
+    }
+
+    @Throws(
+        IOException::class,
+        KeyStoreException::class,
+        CertificateException::class,
+        NoSuchAlgorithmException::class,
+        SecureStorageException::class
+    )
+    fun readKeyStoreFile(password: SecureString?) {
+        var pass: SecureString? = null
+        if (password != null) pass = password
+        val fileInputStream = FileInputStream(File(_keyStoreFile))
+        _keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        if (pass == null) {
+            pass = get_keyStorePassword()
+            if (pass == null) throw SecureStorageException("No password provided for keystore and not found in config")
+        } else {
+            set_keyStorePassword(pass)
+        }
+        _keyStore!!.load(fileInputStream, pass._value)
+    }
+
+    @Throws(KeyStoreException::class, CertificateException::class, NoSuchAlgorithmException::class, IOException::class)
+    fun createKeyStoreFile(password: SecureString, file: File?) {
+        val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
+        keyStore.load(null)
+        val fileOutputStream = FileOutputStream(file)
+        keyStore.store(fileOutputStream, password._value)
+        password.destroyValue()
+        fileOutputStream.close()
+    }
+
+    @Throws(IOException::class, CertificateException::class, NoSuchAlgorithmException::class, KeyStoreException::class)
+    fun saveKeyStoreFile() {
+        val fileOutputStream = FileOutputStream(_keyStoreFile)
+        val pass = get_keyStorePassword()
+        _keyStore!!.store(fileOutputStream, pass._value)
+        pass.destroyValue()
+    }
+
+    @Throws(
+        NoSuchAlgorithmException::class,
+        InvalidKeySpecException::class,
+        SecureStorageException::class,
+        IOException::class
+    )
+    fun createConfigurationFile(fileName: String?, password: String?) {
+        if (password == null) {
+            SecStorage.createNewSecureStorage(fileName, null, false)
+        } else {
+            SecStorage.createNewSecureStorage(fileName, SecureString(password), true)
+        }
+    }
+
+    @Throws(Exception::class)
+    fun openConfiguration(fileName: String?, masterPassword: SecureString?): String? {
+        if (masterPassword == null || masterPassword._value == null) {
+            _secStorage = SecStorage.open_SecuredStorage(fileName, false)
+            readConnections()
+            return null
+        }
+        _secStorage = SecStorage.open_SecuredStorage(fileName, masterPassword)
+        return if (masterPassword._value != null) {
+            if (!SecStorage.isPasswordCorrect(
+                    fileName,
+                    masterPassword
+                )
+            ) Errors.PASSWORD_ERROR else {
+                _secStorage = SecStorage.open_SecuredStorage(fileName, masterPassword)
+                readConnections()
+                _configSecured = true
+                null
+            }
+        } else {
+            _secStorage = SecStorage.open_SecuredStorage(fileName, masterPassword)
+            readConnections()
+            _configSecured = true
+            null
+        }
+    }
+
+    private fun readConnections() {
+        Connection.set_config(this)
+        val allConnections = _secStorage!!.getAllChildLabels("connection")
+        for (connectionK in allConnections) {
+            val map = _secStorage!!.getAllPropertiesAsMap(connectionK)
+            val connection = Connection(this)
+            connection.name = map["name"]
+            connection.server = map["server"]
+            connection.port = map["port"]
+            connection.user = map["user"]
+            connection.baseDN = map["basedn"]
+            connection.displayAttribute = map["displayattribute"]
+            connection.tag = map["tag"]
+            if (map.containsKey("password") && map["password"] != null) connection.password = PASSWORD_SET
+            if (map["usejndi"] != null && map["usejndi"].equals("true", ignoreCase = true)) connection.isUseJNDI =
+                true else connection.isUseJNDI = false
+            if (map["readonly"] != null && map["readonly"].equals("true", ignoreCase = true)) connection.is_readOnly =
+                true else connection.is_readOnly = false
+            if (map["ssl"] != null && map["ssl"].equals("true", ignoreCase = true)) connection.isSSL =
+                true else connection.isSSL = false
+            _connections[connection.name] = connection
+        }
+    }
+
+    fun getConnection(connectionName: String): Connection? {
+        return _connections[connectionName]
+    }
+
+    fun saveConnections() {
+        try {
+            for (k in _connections.keys) {
+                val con = _connections[k]
+                val label = "connection@@" + con!!.name + "@@"
+                _secStorage!!.addUnsecuredProperty(label + "name", con.name)
+                _secStorage!!.addUnsecuredProperty(label + "server", con.server)
+                _secStorage!!.addUnsecuredProperty(label + "port", con.port)
+                _secStorage!!.addUnsecuredProperty(label + "user", con.user)
+                _secStorage!!.addUnsecuredProperty(label + "basedn", con.baseDN)
+                _secStorage!!.addUnsecuredProperty(label + "displayattribute", con.displayAttribute)
+                _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
+                _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
+                _secStorage!!.addUnsecuredProperty(label + "ssl", con.isSSL.toString())
+                _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
+            }
+        } catch (e: Exception) {
+            logger.error("Save connections exception occured", e)
+        }
+    }
+
+    @Throws(IOException::class)
+    fun deleteConnection(connName: String) {
+        val propKey = "connection@@$connName"
+        val allProps = _secStorage!!.getAllProperties(propKey)
+        for (secureProperty in allProps) {
+            _secStorage!!.deleteProperty(secureProperty)
+        }
+    }
+
+    @Throws(Exception::class)
+    fun updateConnection(con: Connection) {
+        val label = "connection@@" + con.name + "@@"
+        _secStorage!!.addUnsecuredProperty(label + "name", con.name)
+        _secStorage!!.addUnsecuredProperty(label + "server", con.server)
+        _secStorage!!.addUnsecuredProperty(label + "port", con.port)
+        _secStorage!!.addUnsecuredProperty(label + "user", con.user)
+        _secStorage!!.addUnsecuredProperty(label + "basedn", con.baseDN)
+        _secStorage!!.addUnsecuredProperty(label + "displayattribute", con.displayAttribute)
+        _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
+        _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
+        _secStorage!!.addUnsecuredProperty(label + "readonly", con.isSSL.toString())
+        _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
+    }
+
+    fun getConnectionPassword(con: Connection): SecureString? {
+        return try {
+            _secStorage!!.getPropValue("connection@@" + con.name + "@@password")
+        } catch (e: Exception) {
+            logger.error("error reading password", e)
+            null
+        }
+    }
+
+    @Throws(SecureStorageException::class)
+    fun updatePassword(con: Connection, password: SecureString) {
+        if (_configSecured) _secStorage!!.addSecuredProperty(
+            "connection@@" + con.name + "@@password",
+            password
+        ) else _secStorage!!.addUnsecuredProperty("connection@@" + con.name + "@@password", password.toString())
+    }
+
+    companion object {
+        @JvmField
+        var PASSWORD_SET = "***"
+        @JvmField
+        var PASSWORD_NOT_SET = "NO_PASSWORD"
+        var logger = LogManager.getLogger(Config::class.java)
+        @JvmStatic
+        val configurationFile: String
+            get() = if (Files.exists(Paths.get(System.getProperty("user.home") + "//fxldap_cfg.properties"))) {
+                System.getProperty("user.home") + "//fxldap_cfg.properties"
+            } else System.getProperty("user.home") + "//fxldap_cfg.json"
+    }
 }

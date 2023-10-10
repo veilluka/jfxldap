@@ -164,8 +164,10 @@ public class LdapExploreController implements IProgress, ILoader {
                 return new TreeCell<>() {
                     @Override
                     protected void updateItem(CustomEntryItem item, boolean empty) {
+                        super.updateItem(item,empty);
                         textProperty().unbind();
                         styleProperty().unbind();
+                        graphicProperty().unbind();
                         if (empty || item == null) {
                             setGraphic(null);
                             textProperty().set(null);
@@ -176,7 +178,6 @@ public class LdapExploreController implements IProgress, ILoader {
                         if (!item.is_dummy()) {
                             setGraphic(Icons.get_iconInstance().getObjectType(item.get_objectClass()));
                         }
-                        super.updateItem(item, empty);
                     }
                 };
             }
@@ -401,7 +402,7 @@ public class LdapExploreController implements IProgress, ILoader {
             if (_observedEntry.isExpanded()) {
                 if (_observedEntry.getChildren().size() == 1 && _observedEntry.getChildren().get(0).getValue().is_dummy()) {
                     _observedEntry.getChildren().get(0).expandedProperty().removeListener(_expandedListenerOnline);
-                    _observedEntry.getChildren().remove(0);
+                    _observedEntry.getChildren().clear();
                     _progressStage.show();
                     _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
                             _observedEntry.getValue().getEntry().getDN(), null, _this);
@@ -413,13 +414,19 @@ public class LdapExploreController implements IProgress, ILoader {
                     executor.submit(() -> _executor.execute(_currentReader));
                 }
             }
+            else{
+                _treeView.autosize();
+                _treeView.refresh();
+
+            }
+            /*
             else {
                 _treeView.getRoot().getChildren().forEach(x->{
                     _treeView.refresh();
-                    
-                    System.out.println("CR->" + x.getValue().getRdn());
                 });
             }
+
+             */
         };
 
         _expandedListenerFile = (ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
