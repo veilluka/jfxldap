@@ -91,8 +91,10 @@ public class Controller implements Initializable {
             SplitPane sp = new SplitPane();
             sp.setOrientation(Orientation.VERTICAL);
             sp.setMinSize(100,100);
+            sp.getStyleClass().add("custom-split-pane");
             _mainPane.getItems().add(sp);
             DetachableTabPane detachableTabPane = createDetachableTabPane();
+
             detachableTabPane.setOnClosedPassSibling(x-> cleanupGui());
             if(i==0){
                 detachableTabPane.addTab("EXPLORER", _ctManager._ldapSourceExploreCtrl.get_window());

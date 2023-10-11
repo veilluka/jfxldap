@@ -6,6 +6,7 @@ import com.unboundid.ldap.sdk.Entry;
 import com.unboundid.ldap.sdk.Filter;
 import com.unboundid.ldap.sdk.SearchScope;
 import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -16,7 +17,7 @@ import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -44,6 +45,7 @@ public class DeleteEntriesController implements ILoader, IProgress {
     Scene _scene;
     Stage _stage;
     private Main _main;
+    private List<String> _itemsToDelete = null;
 
     @FXML
     private void initialize() {
@@ -64,6 +66,9 @@ public class DeleteEntriesController implements ILoader, IProgress {
         });
         _buttonDelete.setOnAction(x->{
                 delete();
+        });
+        _buttonCancel.setOnAction(x->{
+            _stage.close();
         });
         _buttonDelete.setStyle(st1);
     }
@@ -110,39 +115,14 @@ public class DeleteEntriesController implements ILoader, IProgress {
         if(_selectedDN==null) return;
         if(!realDeleteDone && !_listViewResults.getItems().isEmpty())
         {
-            if(!GuiHelper.confirm("Confirm delete","Delete found entries?","This will delete all found entries, " +
+             if(!GuiHelper.confirm("Confirm delete","Delete found entries?","This will delete all found entries, " +
                     "in case LDAP Filter has been used under children only, only leafs will be deleted!")) return;
-            List<String> deleted = new ArrayList<>();
-            List<String> notDeleted = new ArrayList<>();
-            for(TextField textField: _listViewResults.getItems())
-            {
-                try {
-                    _currentConnection.delete(textField.getText());
-                    deleted.add(textField.getText());
-                    textField.setStyle("-fx-text-fill: green");
-                } catch (Exception e) {
-                    notDeleted.add(textField.getText());
-                }
-            }
-            realDeleteDone=true;
-            _buttonDelete.setDisable(true);
-            _listViewResults.getItems().clear();
-            for(String s: notDeleted)
-            {
-                TextField textField = new TextField();
-                textField.setText(s);
-                textField.setStyle("-fx-text-fill: white; -fx-background-color: red");
-                _listViewResults.getItems().add(textField);
-            }
-            for(String s: deleted)
-            {
-                TextField textField = new TextField();
-                textField.setText(s);
-                textField.setStyle("-fx-text-fill: white; -fx-background-color: green");
-                _listViewResults.getItems().add(textField);
-            }
-            _main._ctManager._ldapSourceExploreCtrl.refreshTree_checkMissingEntries(_selectedEntry);
+            _stage.close();
+            Main._ctManager._progressWindowController._stage.show();
+            _itemsToDelete = _listViewResults.getItems().stream().map(x->x.getText()).toList();
+            new Thread(deleteEntries).start();
             return;
+
         }
         try {
             _unboundidLdapSearch = new UnboundidLdapSearch(_main._configuration
@@ -155,7 +135,7 @@ public class DeleteEntriesController implements ILoader, IProgress {
             _unboundidLdapSearch.set_searchScope(SearchScope.SUB);
             _listViewResults.getItems().clear();
             _listViewResults.setDisable(false);
-            _main._ctManager._progressWindowController._stage.show();
+            Main._ctManager._progressWindowController._stage.show();
             ExecutorService executorService = Executors.newSingleThreadExecutor();
             executorService.execute(_unboundidLdapSearch);
         }
@@ -173,12 +153,21 @@ public class DeleteEntriesController implements ILoader, IProgress {
 
     @Override
     public void setProgress(double progress, String description) {
-        logger.info("Progress done->{}",progress);
-        Platform.runLater(()-> _main._ctManager._progressWindowController.setProgress(progress,description));
+          Platform.runLater(()-> Main._ctManager._progressWindowController.setProgress(progress,description));
     }
 
     @Override
     public void signalTaskDone(String taskName, String description, Exception e) {
+        if(taskName.equals("deleted")){
+            Platform.runLater(()->{
+                //Main._ctManager._progressWindowController._stage.close();
+                //_stage.show();
+                _buttonDelete.setDisable(true);
+                _listViewResults.getItems().clear();
+            });
+            return;
+        }
+
         Platform.runLater(()->{
              _main._ctManager._progressWindowController._stage.close();
              _buttonDelete.setStyle(st2);
@@ -196,7 +185,31 @@ public class DeleteEntriesController implements ILoader, IProgress {
 
     @Override
     public void setProgress(String taskName, double progress) {
-        //Platform.runLater(()->_progressIndicator.setProgress(progress));
+        Platform.runLater(()->Main._ctManager._progressWindowController.setProgress(progress,taskName));
     }
 
+    Task<Void> deleteEntries = new Task<>() {
+        @Override
+        protected Void call() throws Exception {
+            Integer done = 0;
+            double nrOfEntries = _itemsToDelete.size();
+            for (String dn : _itemsToDelete) {
+                done++;
+                _currentConnection.delete(dn);
+                if (done % 10 == 0) {
+                    double prog = (double) done / nrOfEntries;
+                    setProgress(prog, dn);
+                }
+            }
+            realDeleteDone = true;
+            Platform.runLater(() -> {
+                Main._ctManager._progressWindowController._stage.close();
+                _stage.show();
+                _buttonDelete.setDisable(true);
+                _listViewResults.getItems().clear();
+            });
+            signalTaskDone("deleted", "done", null);
+            return null;
+        }
+    };
 }

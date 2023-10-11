@@ -467,10 +467,13 @@ public class LdapExploreController implements IProgress, ILoader {
             logger.debug("Deleting only one child {}", _observedEntry.getValue().getDn());
             try {
                 logger.info("DELETING NOW-> {}" + _observedEntry.getValue().getDn());
+                if(!GuiHelper.confirm("Delete","Confirm deletion",_observedEntry.getValue().getDn())) return;
+
                 _currConnection.delete(_observedEntry.getValue().getDn());
+                _observedEntry.getParent().getChildren().remove(_observedEntry);
+                _observedEntry = null;
             } catch (Exception e) {
                 GuiHelper.EXCEPTION("Error deleting entry", e.getMessage(), e);
-                return;
             }
         } else {
             _main._ctManager._deleteEntriesController.show(_observedEntry, _currConnection, _selectedDN);
@@ -986,6 +989,9 @@ public class LdapExploreController implements IProgress, ILoader {
         _this = this;
         initProgressWindow(_main);
         _treeView = new TreeView<>();
+        _treeView.getStyleClass().add("code-font-tree");
+
+
         VBox.setVgrow(_treeView, Priority.ALWAYS);
         _treeView.setMaxHeight(Double.MAX_VALUE);
 

@@ -49,7 +49,7 @@ public class DetachableTabPane extends TabPane {
 	private boolean closeIfEmpty;
 
 	public DetachableTabPane() {
-		getStyleClass().add("detachable-tab-pane");
+
 		attachListeners();
 	}
 
@@ -61,7 +61,6 @@ public class DetachableTabPane extends TabPane {
 
 	private void initDropButton() {
 		btnTop = new StackPane();
-		btnTop.getStyleClass().addAll("adjacent-drop", "drop-top");
 		btnRight = new StackPane();
 		btnRight.getStyleClass().addAll("adjacent-drop", "drop-right");
 

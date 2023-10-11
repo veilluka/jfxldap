@@ -4,13 +4,13 @@
     -fx-background-color: rgba(18, 109, 149, 0.4);
     -fx-min-width: 130px;
     -fx-min-height: 130px;
-    -fx-border-width: 40;
+    -fx-border-width: 10;
     -fx-border-color: rgba(18, 109, 149, 0.2);
 }
 
 .adjacent-drop {
     -fx-background-color: -fx-body-color;
-    -fx-border-width: 2;
+    -fx-border-width: 1;
     -fx-border-color: -fx-focus-color;
 }
 
@@ -53,8 +53,9 @@
 }
 
 .root {
-    -fx-font-family: "Arial", sans-serif;
     -fx-background-color: #f4f4f4;
+    -fx-font-family: 'Courier New', monospace;
+    -fx-font-size: 12px;
 }
 
 .button {
@@ -108,9 +109,9 @@
 }
 
 .list-view, .tree-view, .table-view {
-    -fx-background-color: #ffffff;
+    -fx-background-color: #C6CFCE;
     -fx-border-color: #d3d3d3;
-    -fx-border-radius: 5px;
+    -fx-border-radius: 1px;
 }
 
 .list-cell:filled:selected, .tree-cell:filled:selected, .table-row-cell:selected {
@@ -139,5 +140,75 @@
     -fx-background-radius: 5px;
     -fx-border-radius: 5px;
 }
+
+.code-font-tree .tree-cell {
+    -fx-font-family: 'Courier New', monospace;
+    -fx-font-size: 12px;
+}
+
+.entry-view .tree-table-cell {
+    -fx-font-family: 'Courier New', monospace;
+    -fx-font-size: 14px;
+}
+
+.custom-tree-view {
+    -fx-background-color: #FFD700;  /* Change this color to your preference */
+}
+
+.custom-split-pane {
+    /* Making edges of the SplitPane smooth */
+    -fx-border-radius: 5px;
+    -fx-background-radius: 5px;
+}
+
+.custom-split-pane .split-pane-divider {
+    /* Changing the color of the divider to blue */
+    -fx-background-color: blue;
+
+    /* Making divider's borders very small and edges smooth */
+    -fx-border-width: 0.5px;
+    -fx-border-color: grey;
+    -fx-border-radius: 5px;
+}
+
+.detachable-tab-pane .tab-label {
+    -fx-text-fill: blue;  /* Change foreground color to blue */
+}
+
+.detachable-tab-pane .tab {
+    -fx-border-width: 0.5px; /* Make borders very small */
+    -fx-border-color: grey;  /* Optional: define a border color */
+    -fx-background-radius: 5px;  /* Smooth (round) the tab edges */
+    -fx-border-radius: 5px;  /* Smooth (round) the tab borders */
+}
+
+.detachable-tab-pane .tab-header-background {
+    -fx-background-radius: 5px;  /* Smooth (round) the header edges */
+}
+
+.detachable-tab-pane {
+    -fx-border-radius: 5px;  /* Smooth (round) the TabPane's edges */
+}
+
+.tab-pane .tab-label {
+    -fx-text-fill: blue;  /* Change foreground color to blue */
+}
+
+.tab-pane .tab {
+    -fx-border-width: 0.5px;  /* Make borders very small */
+    -fx-border-color: grey;   /* Optional: define a border color */
+    -fx-background-radius: 5px;  /* Smooth (round) the tab edges */
+    -fx-border-radius: 5px;  /* Smooth (round) the tab borders */
+}
+
+.tab-pane .tab-header-background {
+    -fx-background-radius: 5px;  /* Smooth (round) the header edges */
+}
+
+.tab-pane {
+    -fx-border-radius: 5px;  /* Smooth (round) the TabPane's edges */
+}
+
+
 
 /* Add more styles as needed for other controls */

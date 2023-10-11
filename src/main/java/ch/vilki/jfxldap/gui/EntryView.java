@@ -103,6 +103,7 @@ public class EntryView extends TreeTableView<EntryView.EntryValue> {
                 setSearchMode(_searchValue);
             }
         });
+        this.getStyleClass().add("entry-view");
 
         _addAttribute.setDisable(true);
         _addValue.setDisable(true);

@@ -12,6 +12,7 @@ public class DetachableTab extends Tab {
 	private final BooleanProperty detachable = new SimpleBooleanProperty(true);
 
 	public DetachableTab() {
+
 	}
 
 	public DetachableTab(String string) {
