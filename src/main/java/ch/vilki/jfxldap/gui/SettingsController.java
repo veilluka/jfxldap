@@ -497,7 +497,7 @@ public class SettingsController implements ILoader {
             _main._ctManager._keyStoreController.setCertificatesToBeAdded(foundCertificates);
             _main._ctManager._keyStoreController._buttonClose.setVisible(true);
             _tabPane.getSelectionModel().select(_keyStoreTab);
-            //_main.get_keyStoreController().showWindow();
+            Main._ctManager._keyStoreController.showWindow();
 
         });
         _buttonExportConnections.setOnAction(x -> {

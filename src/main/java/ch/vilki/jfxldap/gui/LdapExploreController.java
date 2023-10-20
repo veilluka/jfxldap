@@ -297,6 +297,7 @@ public class LdapExploreController implements IProgress, ILoader {
             logger.info("Selected attribute is->" + enterValue);
             _progressStage.show();
             setNewDisplayAttribute(_treeView.getSelectionModel().getSelectedItem(), enterValue);
+            _currConnection.setDisplayAttribute(enterValue);
             _progressStage.close();
         });
 
@@ -452,6 +453,7 @@ public class LdapExploreController implements IProgress, ILoader {
             if (_allTreeEntries.get(k).isExpanded()) refreshTree_checkAddedEntries(_allTreeEntries.get(k));
         }
     }
+
 
     private void getAllEntries(TreeItem<CustomEntryItem> item) {
         _allTreeEntries.put(item.getValue().getDn(), item);
@@ -978,6 +980,8 @@ public class LdapExploreController implements IProgress, ILoader {
             }
         } catch (Exception e) { }
     }
+
+
 
     @Override
     public void setProgress(String taskName, double progress) { }

@@ -26,9 +26,12 @@ application {
 
 repositories {
     mavenCentral()
+    /*
     flatDir{
         dir("lib")
     }
+
+     */
 }
 
 dependencies {
@@ -85,6 +88,13 @@ jlink{
         }
     }
 }
+
+
+
+fun foo():String{
+  return "ddd"
+}
+
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
     jvmTarget = "17"
