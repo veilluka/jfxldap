@@ -101,6 +101,7 @@ class CollectionEntry : CustomEntryItem {
     }
 
     fun getLdapFilter(): String {
+        if(LdapFilter.get()==null) return "(objectclass=*)"
         return LdapFilter.get()
     }
 
@@ -140,9 +141,9 @@ class CollectionEntry : CustomEntryItem {
         this.ParentSelected.set(ParentSelected)
     }
 
-    var _displayDN: SimpleStringProperty?
+    var _displayDN: SimpleStringProperty
     fun getDisplayDN(): String {
-        return if (_displayDN == null || _displayDN!!.get() == null) "" else _displayDN!!.get()
+        return _displayDN.get()?:""
     }
 
     fun displayDNProperty(): SimpleStringProperty? {
@@ -157,11 +158,13 @@ class CollectionEntry : CustomEntryItem {
         dn: String?, subtree: Boolean, deleteTarget: Boolean,
         attributes: List<String>?, filterAction: String?, ldapFilter: String?, displayDN: String?
     ) {
-        _dn.set(dn)
+        if(dn==null) _dn.set("INVALID DN")
+        else _dn.set(dn)
         Subtree = SimpleBooleanProperty(subtree)
         _overWriteEntry = SimpleBooleanProperty(deleteTarget)
         val l = FXCollections.observableArrayList<String>()
-        l.addAll(attributes!!)
+        attributes?.let { l.addAll(it) }
+
         _attributes = SimpleListProperty(l)
         _attributes.set(l)
         AttributesAction = SimpleStringProperty(filterAction)
@@ -210,7 +213,8 @@ class CollectionEntry : CustomEntryItem {
         }
 
     override fun toString(): String {
-        return _rdn.get()
+        if(_rdn.get()!=null)  return _rdn.get()
+        return ""
     }
 
     companion object {

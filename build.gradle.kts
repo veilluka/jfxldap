@@ -24,6 +24,7 @@ application {
     mainClass.set("ch.vilki.jfxldap.Main")
 }
 
+
 repositories {
     mavenCentral()
     /*

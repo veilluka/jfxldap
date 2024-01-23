@@ -32,6 +32,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
@@ -129,7 +130,7 @@ public class CollectionsController implements IProgress, ILoader {
     void initFilterWindow() throws IOException {
         FXMLLoader loader = new FXMLLoader();
         loader.setLocation(Main.class.getResource(ControllerManager.Companion.fxmlDir("FilterWindow.fxml")));
-        _filterWindow = (VBox) loader.load();
+        _filterWindow = loader.load();
         _filterWindowController = loader.getController();
         _filterWindowController.set_mainApp(_main);
         // _filterWindowController.get_observableConfigAllAttributes().addAll(_main.get_cfg()._allAttributes);
@@ -314,10 +315,10 @@ public class CollectionsController implements IProgress, ILoader {
                 fileChooser.setTitle("Select import LDIF File");
                 FileChooser.ExtensionFilter filter = new FileChooser.ExtensionFilter("LDIF files (*.ldif)", "*.ldif");
                 fileChooser.getExtensionFilters().add(filter);
-                fileChooser.setInitialDirectory(new File(_main._configuration.get_lastUsedDirectory()));
+                fileChooser.setInitialDirectory(new File(Main._configuration.get_lastUsedDirectory()));
                 File selectedFile = fileChooser.showOpenDialog(_main.get_primaryStage());
                 if (selectedFile == null) return;
-                _main._configuration.set_lastUsedDirectory(selectedFile.getParent());
+                Main._configuration.set_lastUsedDirectory(selectedFile.getParent());
                 CollectionImport collectionImport = new CollectionImport();
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 _progressStage.show();
@@ -335,7 +336,6 @@ public class CollectionsController implements IProgress, ILoader {
                                     logger.error(e);
                                 }
                         );
-                        return;
                     }
                 });
             }
@@ -354,11 +354,11 @@ public class CollectionsController implements IProgress, ILoader {
                 }
                 DirectoryChooser chooser = new DirectoryChooser();
                 chooser.setTitle("Select destination directory");
-                File defaultDirectory = new File(_main._configuration.get_lastUsedDirectory());
+                File defaultDirectory = new File(Main._configuration.get_lastUsedDirectory());
                 chooser.setInitialDirectory(defaultDirectory);
                 File selectedDirectory = chooser.showDialog(_main.get_primaryStage());
                 if (selectedDirectory == null) return;
-                _main._configuration.set_lastUsedDirectory(selectedDirectory.getAbsolutePath());
+                Main._configuration.set_lastUsedDirectory(selectedDirectory.getAbsolutePath());
                 _progressStage.show();
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.submit(() -> {
@@ -379,7 +379,6 @@ public class CollectionsController implements IProgress, ILoader {
                         Platform.runLater(() -> {
                             GuiHelper.EXCEPTION("File creation failed", "File export throws exception ", e);
                             logger.error(e);
-                            return;
                         });
                     }
                 });
@@ -405,7 +404,7 @@ public class CollectionsController implements IProgress, ILoader {
                 if (_observedEntry.isExpanded()) {
                     if (_observedEntry.getChildren().size() == 1 && _observedEntry.getChildren().get(0).getValue().is_dummy()) {
                         _observedEntry.getChildren().clear();
-                        _currentReader = new UnboundidLdapSearch(_main._configuration,_currentConnection, _observedEntry.getValue().getEntry().getDN(), null, _collectionController);
+                        _currentReader = new UnboundidLdapSearch(Main._configuration,_currentConnection, _observedEntry.getValue().getEntry().getDN(), null, _collectionController);
                         _currentReader.setDisplayAttribute(_currentConnection.getDisplayAttribute());
                         executor.execute(_currentReader);
                     }
@@ -431,8 +430,7 @@ public class CollectionsController implements IProgress, ILoader {
                             embeddedProjectViewController._ldapEntryObservableList.stream().sorted().collect(Collectors.toList());
                             TableLdapEntry tableLdapEntry = new TableLdapEntry("DN", _observedEntry.getValue().getEntry().getDN());
                             embeddedProjectViewController._ldapEntryObservableList.add(0, tableLdapEntry);
-
-                            _main.get_entryDiffView().updateValues(_observedEntry.getValue());
+                            if(_main.get_entryDiffView()!=null) _main.get_entryDiffView().updateValues(_observedEntry.getValue());
 
                         }
                     }
@@ -458,7 +456,7 @@ public class CollectionsController implements IProgress, ILoader {
     void initProgressWindow(Main main) throws IOException {
         FXMLLoader settingsLoader = new FXMLLoader();
         settingsLoader.setLocation(SettingsController.class.getResource(ControllerManager.Companion.fxmlDir("ProgressWindow.fxml")));
-        _progressPane = (VBox) settingsLoader.load();
+        _progressPane = settingsLoader.load();
         _progressController = settingsLoader.getController();
         _progressScene = new Scene(_progressPane);
         _progressStage = new Stage();
@@ -517,7 +515,7 @@ public class CollectionsController implements IProgress, ILoader {
                 found.expandedProperty().removeListener(expandedListener);
                 found.setExpanded(true);
                 if (!found.getChildren().isEmpty()) found.getChildren().removeAll(found.getChildren());
-                UnboundidLdapSearch unboundidLdapSearch = new UnboundidLdapSearch(_main._configuration,_currentConnection, searchDN, null, _collectionController);
+                UnboundidLdapSearch unboundidLdapSearch = new UnboundidLdapSearch(Main._configuration,_currentConnection, searchDN, null, _collectionController);
                 unboundidLdapSearch.run();
                 TreeItem<CollectionEntry> addedWantedItem = null;
                 for (Entry entry : unboundidLdapSearch.get_children()) {
@@ -601,7 +599,7 @@ public class CollectionsController implements IProgress, ILoader {
             GuiHelper.ERROR("PROJECT", "Project name not set");
             return false;
         }
-        _currentCollectionsProject = new CollectionsProject(_main._configuration,projectName);
+        _currentCollectionsProject = new CollectionsProject(Main._configuration,projectName);
         embeddedProjectViewController._textFieldProjectName.setText(projectName);
         _currentConnection = null;
         _treeView.setRoot(null);
@@ -622,7 +620,7 @@ public class CollectionsController implements IProgress, ILoader {
     public boolean openProject() {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Open Collections project");
-        File defaultDirectory = new File(_main._configuration.get_lastUsedDirectory());
+        File defaultDirectory = new File(Objects.requireNonNull(Main._configuration.get_lastUsedDirectory()));
         if (Files.exists(defaultDirectory.toPath())) chooser.setInitialDirectory(defaultDirectory);
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("excel project", "*.project.xlsx"));
 
@@ -631,9 +629,8 @@ public class CollectionsController implements IProgress, ILoader {
         String projectName = selectedFile.getName();
         if (projectName == null) return false;
         projectName = projectName.toLowerCase().replaceAll(".project.xlsx", "");
-        _main._configuration.set_lastUsedDirectory(selectedFile.getParent());
-        ;
-        _currentCollectionsProject = new CollectionsProject(_main._configuration,projectName);
+        Main._configuration.set_lastUsedDirectory(selectedFile.getParent());
+        _currentCollectionsProject = new CollectionsProject(Main._configuration,projectName);
         try {
             _currentCollectionsProject.readProject(selectedFile.getAbsolutePath());
         } catch (Exception e) {
@@ -653,11 +650,11 @@ public class CollectionsController implements IProgress, ILoader {
         if (_currentCollectionsProject.get_fileName() == null) {
             DirectoryChooser chooser = new DirectoryChooser();
             chooser.setTitle("Select destination directory");
-            File defaultDirectory = new File(_main._configuration.get_lastUsedDirectory());
+            File defaultDirectory = new File(Main._configuration.get_lastUsedDirectory());
             if (Files.exists(defaultDirectory.toPath())) chooser.setInitialDirectory(defaultDirectory);
             File selectedDirectory = chooser.showDialog(_main.get_primaryStage());
             if (selectedDirectory == null) return;
-            _main._configuration.set_lastUsedDirectory(selectedDirectory.getAbsolutePath());
+            Main._configuration.set_lastUsedDirectory(selectedDirectory.getAbsolutePath());
             _currentCollectionsProject.setCollectionEntries(embeddedProjectViewController._dnEntryObservableList);
             _currentCollectionsProject.writeProject(selectedDirectory.getAbsolutePath(), false);
             embeddedProjectViewController._textFieldFileName.setText(_currentCollectionsProject.get_fileName());
@@ -814,7 +811,7 @@ public class CollectionsController implements IProgress, ILoader {
         if (_currentConnection != null) _currentConnection.disconect();
         _currentConnection = null;
         SecureString password = null;
-        password = _main._configuration.getConnectionPassword(selectedConnection);
+        password = Main._configuration.getConnectionPassword(selectedConnection);
 
         if (password == null) {
             password = new SecureString(GuiHelper.enterPassword("Source Connection Password", "Enter login password"));
@@ -829,7 +826,7 @@ public class CollectionsController implements IProgress, ILoader {
             connection.connect();
             String selectedValue = connection.getBaseDN();
             RootDSE root = connection.getRootDSE();
-            String context[] = root.getNamingContextDNs();
+            String[] context = root.getNamingContextDNs();
             if (selectedValue == null && context == null) {
                 Filter f = Filter.create("(objectclass=*)");
                 SearchResult found = connection.search("", SearchScope.ONE, f, null);
@@ -846,7 +843,7 @@ public class CollectionsController implements IProgress, ILoader {
             if (selectedValue == null && context != null) selectedValue = context[0];
             if (connection.getBaseDN() == null) connection.setBaseDN(selectedValue);
             _currentConnection = connection;
-            _currentReader = new UnboundidLdapSearch(_main._configuration,_currentConnection, _currentConnection.getBaseDN(), null, _collectionController);
+            _currentReader = new UnboundidLdapSearch(Main._configuration,_currentConnection, _currentConnection.getBaseDN(), null, _collectionController);
             _currentReader.setDisplayAttribute(_currentConnection.getDisplayAttribute());
             _connectionSetupRunning = true;
             executor.execute(_currentReader);
@@ -858,7 +855,6 @@ public class CollectionsController implements IProgress, ILoader {
             _currentConnection = null;
             _currentReader = null;
             _connectionSetupRunning = false;
-            return;
         }
     }
 

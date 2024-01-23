@@ -3,6 +3,7 @@ package ch.vilki.jfxldap.gui;
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.Config;
 import ch.vilki.jfxldap.backend.Connection;
+import ch.vilki.secured.Gui;
 import ch.vilki.secured.SecureStorageException;
 import ch.vilki.secured.SecureString;
 import com.unboundid.ldap.sdk.LDAPException;
@@ -275,8 +276,10 @@ public class SettingsController implements ILoader {
             FileChooser.ExtensionFilter filter = new FileChooser.ExtensionFilter("jks files (*.jks)", "*.jks");
             File file = GuiHelper.selectFile(_main, null, "Enter fileName", GuiHelper.FILE_OPTIONS.OPEN_FILE);
             if (file == null) return;
+
             String pass = GuiHelper.enterPassword("Enter keystore password", "Enter password for keystore,it will be stored in secured storage");
             try {
+                _main._configuration.set_keyStoreFile(file.getAbsolutePath());
                 _main._configuration.readKeyStoreFile(new SecureString(pass));
                 _textFieldKeystoreFile.setText(file.getAbsolutePath());
                 _main._configuration.set_keyStoreFile(file.getAbsolutePath());
@@ -302,7 +305,9 @@ public class SettingsController implements ILoader {
                 _main._configuration.set_keyStorePassword(new SecureString(pass));
                 _textFieldKeystoreFile.setText(file.getAbsolutePath());
                 _main._ctManager._keyStoreController.cleanUp();
-                _main._ctManager._keyStoreController.initWindow();
+                GuiHelper.INFO("Keystore created", "Keystore created in " + file.getAbsolutePath());
+
+                //_main._ctManager._keyStoreController.initWindow();
             } catch (KeyStoreException | CertificateException | NoSuchAlgorithmException | IOException e) {
                 logger.error("Exception in creating keystore file", e);
                 GuiHelper.EXCEPTION("Error occured during creation", e.getLocalizedMessage(), e);
@@ -495,6 +500,7 @@ public class SettingsController implements ILoader {
             }
 
             _main._ctManager._keyStoreController.setCertificatesToBeAdded(foundCertificates);
+            //_main._ctManager._keyStoreController.showWindow();
             _main._ctManager._keyStoreController._buttonClose.setVisible(true);
             _tabPane.getSelectionModel().select(_keyStoreTab);
             Main._ctManager._keyStoreController.showWindow();

@@ -30,8 +30,9 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
         setStyleProperty(ViewStyle.GREYED_OUT)
     }
 
-    fun getEntry(): Entry {
-        return _entry.get() as Entry
+    fun getEntry(): Entry? {
+        _entry.get()?.let { return it as Entry  }
+       return null
     }
 
     fun setEntry(entry:Entry) = _entry.set(entry)
@@ -45,7 +46,13 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
         _styleProperty = SimpleStringProperty(viewStyle.style)
     }
 
-    fun getDn() = _dn.get()
+    fun getDn(): String {
+        if(_dn.get() == null) {
+           return   "INVALID DN"
+        }
+        else return _dn.get()
+    }
+
     fun getRdn() = _rdn.get()
     fun setRdn(value:String) = _rdn.set(value)
 
@@ -76,15 +83,12 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
     constructor(entry: Entry?) {
         var dn: String? = "ENTRY_NULL"
         var rdn = "ENTRY_NULL"
-        if (entry != null) {
-            val oClass = entry.objectClassAttribute
-            if (oClass != null) for (cl in oClass.values) _objectClass.add(cl.lowercase(Locale.getDefault()))
-            dn = entry.dn
-            try {
-                rdn = entry.rdn.toString()
-            } catch (e: Exception) {
-                logger.error("Exception", e)
+        entry?.let { entryLdap->
+            entry.objectClassAttribute?.values?.forEach {
+                _objectClass.add(it.lowercase(Locale.getDefault()))
             }
+            dn = entryLdap.dn
+            rdn = entryLdap.rdn?.toString() ?: "ENTRY NULL"
         }
         _dn.set(dn)
         _entry.set(entry)
@@ -113,6 +117,7 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
 
     fun setDisplayAttribute(attributeName: String?) {
         if (attributeName == null || is_dummy()) return
+
         _entry.get()?.let { entry->
             entry as Entry
             entry.getAttribute(attributeName)?.let { value->
@@ -120,7 +125,7 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
                 return
             }
         }
-        logger.error("could not set display attribute for $attributeName")
+        logger.error("could not set display attribute for $attributeName and $_entry")
     }
 
     override fun toString(): String {

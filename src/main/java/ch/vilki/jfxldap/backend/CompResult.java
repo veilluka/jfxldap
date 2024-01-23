@@ -15,7 +15,9 @@ public class CompResult implements java.io.Serializable, Comparable<CompResult> 
         ENTRY_NOT_EQUAL,
         ONLY_IN_SOURCE,
         ONLY_IN_TARGET,
-        ENTRY_EQUAL_BUT_CHILDREN_NOT
+        ENTRY_EQUAL_BUT_CHILDREN_NOT,
+        COMPARE_ERROR,
+
     };
 
     private COMPARE_RESULT _compare_result = null;
@@ -52,6 +54,7 @@ public class CompResult implements java.io.Serializable, Comparable<CompResult> 
         return getRDN().compareTo(o.getRDN());
     }
     public COMPARE_RESULT get_compare_result() {
+        if(_compare_result==null) return COMPARE_RESULT.COMPARE_ERROR;
         return _compare_result;
     }
     public void set_compare_result(COMPARE_RESULT _compare_result) {

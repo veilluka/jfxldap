@@ -65,7 +65,6 @@ public class CollectionsProject {
     public void addCollectionEntry(CollectionEntry entry) throws Exception {
         if (_collectionEntries == null) _collectionEntries = new HashMap<>();
         if (entry == null) throw new Exception("Entry null pointer");
-        if (entry.getDn() == null) throw new Exception("DN not set in Entry");
         _collectionEntries.put(entry.getDn(), entry);
     }
 

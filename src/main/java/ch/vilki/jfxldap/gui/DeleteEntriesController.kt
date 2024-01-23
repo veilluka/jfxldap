@@ -28,43 +28,42 @@ class DeleteEntriesController : ILoader, IProgress {
     @FXML lateinit var _hboxFilter: HBox
     @FXML lateinit var _listViewResults: ListView<TextField>
 
-    var _textFieldLdapFilter: TextFieldLdapFilter? = null
+    var _textFieldLdapFilter: TextFieldLdapFilter = TextFieldLdapFilter()
     var _currentConnection: Connection? = null
     var _selectedDN: String? = null
     var _deleteEntryToggleGroup = ToggleGroup()
     var _unboundidLdapSearch: UnboundidLdapSearch? = null
     var _selectedEntry: TreeItem<CustomEntryItem>? = null
     var _scene: Scene? = null
-    var _stage: Stage? = null
+    lateinit var _stage: Stage
     private var _main: Main? = null
     private var _itemsToDelete: List<String>? = null
     @FXML
     private fun initialize() {
-        _radioButtonOnlyChildren!!.toggleGroup = _deleteEntryToggleGroup
-        _radioButtonSelectedWithChildren!!.toggleGroup = _deleteEntryToggleGroup
-        _textFieldLdapFilter = TextFieldLdapFilter()
-        _hboxFilter!!.children.add(_textFieldLdapFilter)
-        _listViewResults!!.isDisable = true
-        _textFieldLdapFilter!!.isDisable = true
-        _radioButtonSelectedWithChildren!!.isSelected = true
-        _radioButtonOnlyChildren!!.onAction = EventHandler { x: ActionEvent? ->
-            _listViewResults!!.isDisable = false
-            _textFieldLdapFilter!!.isDisable = false
+        _radioButtonOnlyChildren.toggleGroup = _deleteEntryToggleGroup
+        _radioButtonSelectedWithChildren.toggleGroup = _deleteEntryToggleGroup
+        _hboxFilter.children.add(_textFieldLdapFilter)
+        _listViewResults.isDisable = true
+        _textFieldLdapFilter.isDisable = true
+        _radioButtonSelectedWithChildren.isSelected = true
+        _radioButtonOnlyChildren.onAction = EventHandler { x: ActionEvent? ->
+            _listViewResults.isDisable = false
+            _textFieldLdapFilter.isDisable = false
         }
-        _radioButtonSelectedWithChildren!!.onAction = EventHandler { x: ActionEvent? ->
-            _listViewResults!!.isDisable = true
-            _textFieldLdapFilter!!.isDisable = true
+        _radioButtonSelectedWithChildren.onAction = EventHandler { x: ActionEvent? ->
+            _listViewResults.isDisable = true
+            _textFieldLdapFilter.isDisable = true
         }
-        _buttonDelete!!.onAction = EventHandler { x: ActionEvent? -> delete() }
-        _buttonCancel!!.onAction = EventHandler { x: ActionEvent? -> _stage!!.close() }
-        _buttonDelete!!.style = st1
+        _buttonDelete.onAction = EventHandler { x: ActionEvent? -> delete() }
+        _buttonCancel.onAction = EventHandler { x: ActionEvent? -> _stage.close() }
+        _buttonDelete.style = st1
     }
 
     override fun setWindow(parent: Parent) {
         window = parent as VBox
         _scene = Scene(window)
         _stage = Stage()
-        _stage!!.scene = _scene
+        _stage.scene = _scene
     }
 
     override fun setMain(main: Main) {
@@ -73,17 +72,17 @@ class DeleteEntriesController : ILoader, IProgress {
 
     fun show(selectedEntry: TreeItem<CustomEntryItem>?, connection: Connection?, dn: String?) {
         if (selectedEntry == null || connection == null || dn == null) return
-        _buttonDelete!!.style = st1
-        _buttonDelete!!.isDisable = false
-        _buttonDelete!!.text = "Get entries"
+        _buttonDelete.style = st1
+        _buttonDelete.isDisable = false
+        _buttonDelete.text = "Get entries"
         realDeleteDone = false
         _selectedDN = dn
         _currentConnection = connection
-        _textFieldLdapFilter!!._currConnection = connection
-        _listViewResults!!.items.clear()
-        _textFieldLdapFilter!!.text = ""
+        _textFieldLdapFilter._currConnection = connection
+        _listViewResults.items.clear()
+        _textFieldLdapFilter.text = ""
         _selectedEntry = selectedEntry
-        _stage!!.showAndWait()
+        _stage.showAndWait()
     }
 
     private fun delete() {
@@ -92,15 +91,15 @@ class DeleteEntriesController : ILoader, IProgress {
             return
         }
         if (_selectedDN == null) return
-        if (!realDeleteDone && !_listViewResults!!.items.isEmpty()) {
+        if (!realDeleteDone && !_listViewResults.items.isEmpty()) {
             if (!GuiHelper.confirm(
                     "Confirm delete", "Delete found entries?", "This will delete all found entries, " +
                             "in case LDAP Filter has been used under children only, only leafs will be deleted!"
                 )
             ) return
-            _stage!!.close()
+            _stage.close()
             Main._ctManager._progressWindowController._stage.show()
-            _itemsToDelete = _listViewResults!!.items.stream().map { x: TextField -> x.text }
+            _itemsToDelete = _listViewResults.items.stream().map { x: TextField -> x.text }
                 .toList()
             Thread(deleteEntries).start()
             return
@@ -109,14 +108,14 @@ class DeleteEntriesController : ILoader, IProgress {
             _unboundidLdapSearch = UnboundidLdapSearch(
                 Main._configuration, _currentConnection, this
             )
-            _unboundidLdapSearch!!._searchDN = _selectedDN
-            _unboundidLdapSearch!!.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none)
+            _unboundidLdapSearch?._searchDN = _selectedDN
+            _unboundidLdapSearch?.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none)
             var filter = Filter.create("objectclass=*")
-            if (_textFieldLdapFilter!!.is_filterOK) filter = _textFieldLdapFilter!!._filter
-            _unboundidLdapSearch!!._filter = filter
-            _unboundidLdapSearch!!.set_searchScope(SearchScope.SUB)
-            _listViewResults!!.items.clear()
-            _listViewResults!!.isDisable = false
+            if (_textFieldLdapFilter.is_filterOK) filter = _textFieldLdapFilter._filter
+            _unboundidLdapSearch?._filter = filter
+            _unboundidLdapSearch?.set_searchScope(SearchScope.SUB)
+            _listViewResults.items.clear()
+            _listViewResults.isDisable = false
             Main._ctManager._progressWindowController._stage.show()
             val executorService = Executors.newSingleThreadExecutor()
             executorService.execute(_unboundidLdapSearch)
@@ -126,7 +125,7 @@ class DeleteEntriesController : ILoader, IProgress {
     }
 
     override fun setOwner(stage: Stage) {
-        _stage!!.initOwner(stage)
+        _stage.initOwner(stage)
     }
 
     override fun setProgress(progress: Double, description: String?) {
@@ -136,15 +135,17 @@ class DeleteEntriesController : ILoader, IProgress {
     override fun signalTaskDone(taskName: String?, description: String?, e: Exception?) {
         Platform.runLater {
             Main._ctManager._progressWindowController._stage.close()
-            _buttonDelete!!.style = st2
-            _buttonDelete!!.text = "DELETE"
+            _buttonDelete.style = st2
+            _buttonDelete.text = "DELETE"
         }
         val sorted =
-            _unboundidLdapSearch!!._children.stream().sorted(Helper.DN_LengthComparator).collect(Collectors.toList())
-        for (s in sorted) {
-            if (_radioButtonOnlyChildren!!.isSelected && s.dn.equals(_selectedDN, ignoreCase = true)) continue
-            val textField = TextField(s.dn)
-            Platform.runLater { _listViewResults!!.items.add(textField) }
+            _unboundidLdapSearch?._children?.stream()?.sorted(Helper.DN_LengthComparator)?.collect(Collectors.toList())
+        if (sorted != null) {
+            for (s in sorted) {
+                if (_radioButtonOnlyChildren.isSelected && s.dn.equals(_selectedDN, ignoreCase = true)) continue
+                val textField = TextField(s.dn)
+                Platform.runLater { _listViewResults.items.add(textField) }
+            }
         }
     }
 
@@ -156,10 +157,10 @@ class DeleteEntriesController : ILoader, IProgress {
         @Throws(Exception::class)
         override fun call(): Void? {
             var done = 0
-            val nrOfEntries = _itemsToDelete!!.size.toDouble()
+            val nrOfEntries = _itemsToDelete?.size?.toDouble() ?: 1.0
             for (dn in _itemsToDelete!!) {
                 done++
-                _currentConnection!!.delete(dn)
+                _currentConnection?.delete(dn)
                 if (done % 10 == 0) {
                     val prog = done.toDouble() / nrOfEntries
                     setProgress(prog, dn)
@@ -168,9 +169,9 @@ class DeleteEntriesController : ILoader, IProgress {
             realDeleteDone = true
             Platform.runLater {
                 Main._ctManager._progressWindowController._stage.close()
-                _stage!!.show()
-                _buttonDelete!!.isDisable = true
-                _listViewResults!!.items.clear()
+                _stage.show()
+                _buttonDelete.isDisable = true
+                _listViewResults.items.clear()
             }
             return null
         }

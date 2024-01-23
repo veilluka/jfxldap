@@ -1,5 +1,6 @@
 package ch.vilki.jfxldap.backend
 
+import ch.vilki.secured.GuiHelper
 import ch.vilki.secured.SecStorage
 import ch.vilki.secured.SecureStorageException
 import ch.vilki.secured.SecureString
@@ -158,11 +159,13 @@ class Config {
         }
         readConnections()
         _keyStoreFile = _secStorage!!.getPropStringValue("general@@_keystorefile")
-        if (_keyStore == null) {
-            if (_keyStoreFile == null || !Files.exists(Paths.get(_keyStoreFile))) {
-                set_keyStoreFile(null)
-                return "kestore file does not exist"
-            }
+        if(_keyStoreFile==null) return "keystore file not set"
+        if(!Files.exists(Paths.get(_keyStoreFile))){
+            GuiHelper.ERROR("Keystore file not found","Keystore file does not exist, will be deleted from settings")
+            _secStorage!!.deleteProperty("general@@_keystorefile")
+             set_keyStoreFile(null)
+        }
+        else{
             if (_configSecured) readKeyStoreFile(null) else logger.warn("Keystore file is configured but config is not secured, can not read keystore")
         }
         return null

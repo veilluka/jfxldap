@@ -123,7 +123,7 @@ public class KeyStoreController implements ILoader{
                 _textFieldValidFrom.setText(certificate.getNotBefore().toString());
                 _textFieldAlgo.setText(certificate.getSigAlgOID());
                 _textFieldIssuer.setText(certificate.getIssuerDN().getName());
-                _textFieldSubject.setText(certificate.getSubjectDN().getName());
+                 _textFieldSubject.setText(certificate.getSubjectX500Principal().getName());
                 _textFieldValidTo.setText(certificate.getNotAfter().toString());
                 _textFieldVersion.setText(String.valueOf(certificate.getVersion()));
 
@@ -132,6 +132,7 @@ public class KeyStoreController implements ILoader{
         _listViewFound.getItems().clear();
         for(String alias: certificates.keySet())
         {
+           // if(alias.isBlank()) _listViewFound.getItems().add("certificate without alias");
             _listViewFound.getItems().add(alias);
         }
         if(!_hBoxAddList.getChildren().contains(_listViewFound))

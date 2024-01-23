@@ -864,7 +864,7 @@ public class LdapExploreController implements IProgress, ILoader {
         _observedEntry = null;
         if (get_currentConnection() != null) get_currentConnection().disconect();
         set_currentConnection(null);
-        _main.get_entryDiffView().updateValues(null);
+        if(_main.get_entryDiffView()!=null) _main.get_entryDiffView().updateValues(null);
     }
 
     private void removeListerners(TreeItem<CustomEntryItem> item) {
