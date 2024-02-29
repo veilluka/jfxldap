@@ -48,6 +48,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class LdapExploreController implements IProgress, ILoader {
 
@@ -762,14 +763,16 @@ public class LdapExploreController implements IProgress, ILoader {
             if(_currentReader != null &&  _currentReader.get_children() != null)
             {
                 for (Entry entry : _currentReader.get_children()) {
-                    CustomEntryItem collectionEntry = new CustomEntryItem(entry);
+                    CustomEntryItem customEntryItem = new CustomEntryItem(entry);
                     if (get_currentConnection().getDisplayAttribute() != null) {
-                        collectionEntry.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
+                        customEntryItem.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
                     }
-                    items.add(collectionEntry);
+                    //Entry child = _currentReader.getOneChild(customEntryItem.getDn());
+                    //if(child!=null) customEntryItem.set_hasChildren(true);
+                    items.add(customEntryItem);
                 }
             }
-            List<CustomEntryItem> sorted_items = items.stream().sorted().collect(Collectors.toList());
+            List<CustomEntryItem> sorted_items = items.stream().sorted().toList();
            _progressController.setProgress(1.0, "LDAP Read done, sort and build tree now ");
             if (_currentReader == null) {
                 _progressStage.hide();
@@ -792,7 +795,7 @@ public class LdapExploreController implements IProgress, ILoader {
                             GuiHelper.EXCEPTION("Connection Error", e1.getLocalizedMessage(), e1);
                         }
                         if (child != null) {
-                            CustomEntryItem CustomEntryItemDummy = new CollectionEntry(child);
+                            CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
                             CustomEntryItemDummy.setDummy();
                             item.expandedProperty().addListener(_expandedListenerOnline);
                             item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
@@ -819,6 +822,7 @@ public class LdapExploreController implements IProgress, ILoader {
                                 e1.printStackTrace();
                             }
                             if (child != null && sorted_items.size() < 5000) {
+                                item.getValue().set_hasChildren(true);
                                 item.expandedProperty().addListener(_expandedListenerOnline);
                                 CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
                                 CustomEntryItemDummy.setDummy();

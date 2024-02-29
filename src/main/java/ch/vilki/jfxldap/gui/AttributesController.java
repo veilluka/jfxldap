@@ -32,6 +32,8 @@ public class AttributesController {
     Button _buttonAddOperational;
     @FXML
     Button _buttonRemoveOperational;
+    @FXML Button _buttonADDAttributeLike;
+
 
     @FXML
     RadioButton _radioButtonDisableFilter;
@@ -42,8 +44,8 @@ public class AttributesController {
 
     @FXML
     TextField _textFieldFilterAttributesText;
-    @FXML
-    TextField _textFieldFilteredAttributesText;
+
+    @FXML TextField _textFieldAddAttributeLike;
 
     ToggleGroup _radioButtonFilterToggleGroup = new ToggleGroup();
 
@@ -63,7 +65,6 @@ public class AttributesController {
         _radioButtonCompareAttributes.setDisable(disabled);
         _radioButtonIgnoreAttributes.setDisable(disabled);
         _textFieldFilterAttributesText.setDisable(disabled);
-        _textFieldFilteredAttributesText.setDisable(disabled);
     }
 
     public ObservableSet<String> get_observableConfigAllAttributes() {
@@ -106,6 +107,15 @@ public class AttributesController {
                 _listFilterAttributes.getItems().remove(c.getElementRemoved());
             }
         });
+
+        _buttonADDAttributeLike.setOnAction(event -> {
+            if (_listFilterAttributes == null) return;
+            if(!_textFieldAddAttributeLike.getText().isEmpty()){
+                String like = "isLike->" + _textFieldAddAttributeLike.getText();
+                _listFilterAttributes.getItems().add(like);
+            }
+        });
+
         _buttonRemoveFilterList.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {

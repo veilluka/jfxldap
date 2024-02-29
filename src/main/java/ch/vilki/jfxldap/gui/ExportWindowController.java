@@ -33,7 +33,12 @@ public class ExportWindowController  implements ILoader, IProgress {
     @FXML  RadioButton _radioButtonExportDN;
     @FXML  RadioButton _radioButtonOnlySelectedEntry;
     @FXML  RadioButton _radioButtonChildren;
+    @FXML  RadioButton _radioButtonRemoveBASE64;
+
     @FXML Button _buttonGroupWith;
+
+    @FXML TextField _textFieldReplaceText;
+    @FXML TextField _textFieldReplaceWithText;
 
 
     ToggleGroup _radioButtonExportToggleGroup = new ToggleGroup();
@@ -85,7 +90,6 @@ public class ExportWindowController  implements ILoader, IProgress {
             embeddedAttributesViewController._buttonAddOperational.setDisable(true);
             embeddedAttributesViewController._buttonRemoveOperational.setDisable(true);
         }
-
 
     }
 
@@ -274,7 +278,8 @@ public class ExportWindowController  implements ILoader, IProgress {
                 LdifHandler ldifHandler = new LdifHandler();
                 if(_searchExport)ldifHandler.exportLdif(selectedFile,_currentConnection,allEntries,export,ignore,this);
                 else ldifHandler.exportLdif(selectedFile,_currentConnection,export,ignore,_ldapFilter,_exportDN,_radioButtonChildren.isSelected(),
-                        this,_main._configuration);
+                        this,_main._configuration,
+                        _radioButtonRemoveBASE64.isSelected(),_textFieldReplaceText.getText(),_textFieldReplaceWithText.getText());
             });
         }
         else if(_radioButtonEXCEL.isSelected() || _radioButtonCSV.isSelected())

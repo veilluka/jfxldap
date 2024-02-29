@@ -35,6 +35,9 @@ public class FilterWindowController {
     @FXML RadioButton _radioButtonIgnoreAttributes;
     @FXML TextField _textFieldFilterAttributesText;
     @FXML TextField _textFieldSourceFilter;
+    @FXML Button _buttonADDAttributeLike;
+    @FXML TextField _textFieldAddContainsAttribute;
+
     @FXML VBox _vboxFilter;
     @FXML Label _labelSourceFilter;
     @FXML Label _labelTargetFilter;
@@ -183,6 +186,16 @@ public class FilterWindowController {
                 _listAllAttributes.getItems().addAll(schemaAttributes);
             }
         });
+
+        _buttonADDAttributeLike.setOnAction(event -> {
+            if (_listFilterAttributes == null) return;
+            if(!_textFieldAddContainsAttribute.getText().isEmpty()){
+                String like = "isLike->" + _textFieldAddContainsAttribute.getText();
+                _listFilterAttributes.getItems().add(like);
+            }
+        });
+
+
         _textFieldFilterAttributesText.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {

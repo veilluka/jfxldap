@@ -7,14 +7,13 @@ import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import static ch.vilki.jfxldap.backend.KHelperKt.decodeBase64Attributes;
 
 public class LdifHandler {
 
@@ -89,7 +88,7 @@ public class LdifHandler {
 
     public void exportLdif(File file, Connection connection, List<String> exportAttribute,
                            List<String> ignoreAttributes, Filter filter, String exportDN,
-                           boolean exportChildren, IProgress progress, Config config) {
+                           boolean exportChildren, IProgress progress, Config config, Boolean decodeBASE64, String replaceText, String replaceWith) {
         _breakOperation = false;
         _exportedEntriesCount = 0;
         _currentConnection = connection;
@@ -150,12 +149,18 @@ public class LdifHandler {
         try {
             for (Entry entry : exportEntries) {
                 Entry exportEntry = filterAttributes(entry, attributes, ignore);
-                writer.writeEntry(exportEntry);
+                if(!replaceText.isEmpty() && !replaceWith.isEmpty()){
+                    writer.writeEntry(replaceText(exportEntry,replaceText,replaceWith));
+                }
+                else writer.writeEntry(exportEntry);
                 _exportedEntriesCount++;
                 if (_exportedEntriesCount % 10 == 0 && progress != null) progress.setProgress("file_export",
                         (100.0 / nrOfFoundEntries) * (double) _exportedEntriesCount);
             }
             writer.close();
+            if(decodeBASE64){
+                decodeBase64Attributes(file.getAbsolutePath());
+            }
             if (progress != null) progress.signalTaskDone("file_export", "export done", null);
         } catch (Exception e) {
             progress.signalTaskDone("file_export", "Error", e);
@@ -164,6 +169,12 @@ public class LdifHandler {
 
     private Entry filterAttributes(Entry entry, Set<String> attributes, boolean ignore) {
         if (attributes == null || attributes.isEmpty()) return entry;
+        Set<String> like = new HashSet<>();
+        for(String l: attributes){
+            if(l.startsWith("isLike->")){
+                like.add(l.replace("isLike->",""));
+            }
+        }
         Entry retEntry = new Entry(entry.getDN());
         for (Attribute att : entry.getAttributes()) {
             if (ignore) {
@@ -171,8 +182,37 @@ public class LdifHandler {
             } else {
                 if (attributes.contains(att.getName().toLowerCase())) retEntry.addAttribute(att);
             }
-
+            if(!like.isEmpty()){
+                for(String l: like){
+                    if (ignore) {
+                        if(!att.getName().toLowerCase(Locale.ROOT).contains(l.toLowerCase(Locale.ROOT))){
+                            retEntry.addAttribute(att);
+                        }
+                    }
+                    else{
+                        if(att.getName().toLowerCase(Locale.ROOT).contains(l.toLowerCase(Locale.ROOT))){
+                            retEntry.addAttribute(att);
+                        }
+                    }
+                }
+            }
         }
         return retEntry;
     }
+
+    private Entry replaceText(Entry entry, String replaceText, String replaceWith){
+        String replacedDN = entry.getDN().replace(replaceText,replaceWith);
+        Entry newEntry = new Entry(replacedDN);
+        for (Attribute attribute : entry.getAttributes()) {
+                String[] values = attribute.getValues();
+                String newValues[] = new String[values.length];
+                for (int i = 0; i < values.length; i++) {
+                    newValues[i] = Helper.replace(values[i], replaceText, replaceWith);
+                }
+                newEntry.addAttribute(new Attribute(attribute.getName(),newValues));
+        }
+        return newEntry;
+    }
+
+
 }

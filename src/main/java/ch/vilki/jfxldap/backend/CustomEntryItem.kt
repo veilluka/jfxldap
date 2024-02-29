@@ -20,6 +20,7 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
 
     private var _dummy = false
     private var _nrOfChildren = 0
+    var _hasChildren = false
 
     var _objectClass: MutableSet<String> = HashSet<String>().apply { add("top") }
     fun is_dummy(): Boolean {
@@ -67,6 +68,8 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
     }
 
     override fun compareTo(o: CustomEntryItem): Int {
+        if(_hasChildren && !o._hasChildren) return -1
+        if(!_hasChildren && o._hasChildren) return 1
         try {
             return _rdn.get().lowercase(Locale.getDefault()).compareTo(o._rdn.get().lowercase(Locale.getDefault()))
         } catch (e: Exception) {

@@ -5,11 +5,12 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ListView?>
 <?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.AttributesController">
+<HBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.AttributesController">
    <children>
       <VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
          <children>
@@ -89,11 +90,22 @@
                   <Insets right="3.0" />
                </VBox.margin>
             </ListView>
-            <TextField fx:id="_textFieldFilteredAttributesText" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
-               <VBox.margin>
-                  <Insets bottom="3.0" right="3.0" top="5.0" />
-               </VBox.margin>
-            </TextField>
+            <Separator prefWidth="200.0" />
+            <Label maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" text="Add Attribute like" VBox.vgrow="ALWAYS" />
+            <HBox prefHeight="100.0" prefWidth="200.0">
+               <children>
+                  <TextField fx:id="_textFieldAddAttributeLike" maxWidth="1.7976931348623157E308">
+                     <HBox.margin>
+                        <Insets right="3.0" />
+                     </HBox.margin>
+                  </TextField>
+                  <Button fx:id="_buttonADDAttributeLike" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="ADD" HBox.hgrow="ALWAYS">
+                     <HBox.margin>
+                        <Insets right="3.0" />
+                     </HBox.margin>
+                  </Button>
+               </children>
+            </HBox>
          </children>
       </VBox>
    </children>
