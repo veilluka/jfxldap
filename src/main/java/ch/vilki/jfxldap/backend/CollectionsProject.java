@@ -7,6 +7,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -125,6 +127,7 @@ public class CollectionsProject {
         String fileName = null;
         if (isFileName) fileName = targetDirectory;
         else fileName = targetDirectory + "\\" + _projectName + ".project.xlsx";
+
         ExcelFileHandler fileHandler = new ExcelFileHandler();
         List<List<String>> writeValues = new ArrayList<>();
         ArrayList<String> firstRow = new ArrayList<String>();
@@ -137,8 +140,11 @@ public class CollectionsProject {
         firstRow.add(FIELD_LDAP_FILTER);
 
         writeValues.add(firstRow);
-        for (String collectionEntryKey : _collectionEntries.keySet()) {
+        for (String collectionEntryKey : _collectionEntries.keySet().stream().sorted().toList()) {
             CollectionEntry entry = _collectionEntries.get(collectionEntryKey);
+            if(entry.get_displayDN().get()==null || entry.get_displayDN().get().isBlank()) {
+                entry.setDisplayDN(entry.get_dn().get());
+            }
             ArrayList<String> row = new ArrayList<String>();
             row.add(entry.getDisplayDN());
             row.add(collectionEntryKey);
@@ -151,6 +157,7 @@ public class CollectionsProject {
             row.add(entry.LdapFilter.get());
             writeValues.add(row);
         }
+        Files.deleteIfExists(Paths.get(fileName));
         fileHandler.writeExcel(fileName, writeValues, null);
         set_fileName(fileName);
     }

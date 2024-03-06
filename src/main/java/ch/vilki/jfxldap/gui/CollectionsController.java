@@ -478,7 +478,6 @@ public class CollectionsController implements IProgress, ILoader {
             @Override
             public void handle(WindowEvent event) {
                 Platform.runLater(() -> {
-
                     if (_currentCollectionsProject != null) _currentCollectionsProject.set_breakOperation(true);
                 });
             }
@@ -792,13 +791,18 @@ public class CollectionsController implements IProgress, ILoader {
                     _connectionSetupRunning = false;
                     if (!embeddedProjectViewController._dnEntryObservableList.isEmpty()) {
                         embeddedProjectViewController._searchCollectionMap.clear();
+                        List<CollectionEntry> sorted = new ArrayList<>();
+                        embeddedProjectViewController._dnEntryObservableList.sort(CollectionEntry.Companion::compareTo);
                         for (CollectionEntry collEntry : embeddedProjectViewController._dnEntryObservableList)
                             addProjectEntriesToTree(collEntry);
+
                     }
                 }
             }
         });
     }
+
+
 
     public void connect(Connection selectedConnection) {
         _observedEntry = null;

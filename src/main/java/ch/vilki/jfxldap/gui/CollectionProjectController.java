@@ -57,7 +57,7 @@ public class CollectionProjectController {
 
         _tableViewTargetDN.setItems(_dnEntryObservableList);
         _tableColumnEntryDN.setCellValueFactory(new PropertyValueFactory<CollectionEntry,String>("Dn"));
-        _tableColumnSubtree.setCellValueFactory(new PropertyValueFactory<CollectionEntry,String>("Subtree"));
+        _tableColumnSubtree.setCellValueFactory(new PropertyValueFactory<>("Subtree"));
         _tableColumnFilter.setCellValueFactory(new PropertyValueFactory<CollectionEntry,String>("LdapFilter"));
         _tableColumnEntryRDN.setCellValueFactory(new PropertyValueFactory<CollectionEntry,String>("DisplayDN"));
         _tableColumnAttributes.setCellValueFactory(new PropertyValueFactory<CollectionEntry,String>("Attributes"));

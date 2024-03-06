@@ -862,8 +862,10 @@ public class LdapExploreController implements IProgress, ILoader {
         if (_openedLDIFFile != null) _openedLDIFFile = null;
 
         removeListerners(_treeView.getRoot());
-
+        removeListerners(_collectionTree.getRoot());
         _treeView.setRoot(null);
+        _collectionTree.setRoot(null);
+
 
         _observedEntry = null;
         if (get_currentConnection() != null) get_currentConnection().disconect();
@@ -871,8 +873,9 @@ public class LdapExploreController implements IProgress, ILoader {
         if(_main.get_entryDiffView()!=null) _main.get_entryDiffView().updateValues(null);
     }
 
-    private void removeListerners(TreeItem<CustomEntryItem> item) {
-         for (TreeItem<CustomEntryItem> child : item.getChildren()) {
+    private void removeListerners(TreeItem<?> item) {
+        if(item==null || item.getChildren() == null) return;
+        for (TreeItem child : item.getChildren()) {
             child.expandedProperty().removeListener(_expandedListenerOnline);
             child.expandedProperty().unbind();
             removeListerners(child);

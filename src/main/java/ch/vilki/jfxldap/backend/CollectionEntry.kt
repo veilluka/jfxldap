@@ -10,7 +10,10 @@ import org.apache.logging.log4j.LogManager
 import java.util.*
 import java.util.stream.Collectors
 
-class CollectionEntry : CustomEntryItem {
+class CollectionEntry : CustomEntryItem  {
+
+
+
     var Subtree: SimpleBooleanProperty
     fun isSubtree(): Boolean {
         return Subtree.get()
@@ -224,5 +227,22 @@ class CollectionEntry : CustomEntryItem {
         @JvmField
         var EXPORT_ONLY = "EXPORT_ONLY"
         var NONE = "NONE"
+
+        fun compareTo(s:CollectionEntry, o: CollectionEntry): Int {
+            try {
+                var sourceSize = s._dn.get().split(",").size
+                var tSize = o._dn.get().split(",").size
+                if(sourceSize > tSize) return 1
+                else if (tSize > sourceSize) return -1
+                else{
+                    return s._dn.get().lowercase(Locale.getDefault()).compareTo(o._dn.get().lowercase(Locale.getDefault()))
+                }
+            } catch (e: Exception) {
+                CustomEntryItem.logger.error("Exception occured during compareOperation, this rdn->" + s._dn.get() + " other->" + o._dn.get(),
+                    e
+                )
+            }
+            return 0
+        }
     }
 }
