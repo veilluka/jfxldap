@@ -82,7 +82,7 @@ class DeleteEntriesController : ILoader, IProgress {
         _listViewResults.items.clear()
         _textFieldLdapFilter.text = ""
         _selectedEntry = selectedEntry
-        _stage.showAndWait()
+        if(!_stage.isShowing)  _stage.showAndWait()
     }
 
     private fun delete() {

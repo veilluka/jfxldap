@@ -228,12 +228,16 @@ public class Controller implements Initializable {
                 return;
             }
             try {
+                SecStorage cur = SecStorage.open_SecuredStorage(Config.getConfigurationFile(),new SecureString(currentMaster));
+                SecureString kPass = cur.getPropValue("general@@_keyStorePassword");
                 SecStorage.changeMasterPassword(Config.getConfigurationFile(),new SecureString(currentMaster),new SecureString(second));
-                Main._configuration.openConfiguration(Main._configuration.getConfigurationFile(),new SecureString(second));
+                Main._configuration.openConfiguration(Config.getConfigurationFile(),new SecureString(second));
+                if(kPass!=null) Main._configuration.set_keyStorePassword(kPass);
             } catch (Exception e) {
                 LogManager.getLogger().error("Exception occured", e);
                 GuiHelper.EXCEPTION("Error changing master password", e.getMessage(), e);
             }
+            GuiHelper.INFO("Master Operation Change","Master Password changed!");
         });
         _exit.setOnAction(x->{
             System.exit(0);

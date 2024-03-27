@@ -86,10 +86,14 @@ public class KeyStoreController implements ILoader{
             return;
         }
         try {
-            for (Enumeration<String> e = keyStore.aliases(); e.hasMoreElements();)
+            if(keyStore.size() > 0)
             {
-                _listViewStored.getItems().add(e.nextElement());
+                for (Enumeration<String> e = keyStore.aliases(); e.hasMoreElements();)
+                {
+                    _listViewStored.getItems().add(e.nextElement());
+                }
             }
+
         } catch (KeyStoreException e) {
             logger.error("Error reading from keystore",e);
         }
