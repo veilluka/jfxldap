@@ -511,9 +511,23 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         return certificates;
     }
 
-    public void connect(SecureString password) throws LDAPException {
-
-        LDAPConnection c = new LDAPConnection();
+    public void connect(SecureString password) throws LDAPException, GeneralSecurityException {
+        LDAPConnection c = null;
+        if(UseSSL.getValue()){
+            if(UseSSL.get())
+            {
+                if(_config == null || _config.get_keyStore() == null)
+                    throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
+                            "no key store provided");
+                SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
+                c = new LDAPConnection(sslSocketFactory);
+            }
+            else
+            {
+                c = new LDAPConnection();
+            }
+        }
+        else c = new LDAPConnection();
         c.connect(Server.get(),getPortNumber());
         BindResult bindResult = c.bind(User.get(),password.toString());
         if(bindResult.getResultCode().equals(ResultCode.SUCCESS))

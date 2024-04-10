@@ -18,6 +18,12 @@ import jfxtras.styles.jmetro.JMetro;
 import jfxtras.styles.jmetro.Style;
 import org.apache.logging.log4j.LogManager;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
+
+
 public class Main extends Application {
 
     Stage _primaryStage = null;
@@ -44,8 +50,7 @@ public class Main extends Application {
         Controller controller = (Controller )ns.get("controller");
         controller.initMenu();
 
-        System.out.println("");
-        primaryStage.setTitle("jfxLDAP by Bauer Vedran");
+        primaryStage.setTitle("jfxLDAP by Bauer Vedran [" + VersionKt.getSw_version() + "]");
         //JMetro jMetro = new JMetro(root, Style.LIGHT);
         Screen screen = Screen.getPrimary();
         Rectangle2D bounds = screen.getVisualBounds();
@@ -130,6 +135,16 @@ public class Main extends Application {
 
     public static void main(String[] args) {
         String[] testArguments = null;
+        /*
+        String[] testArguments = new String[6];
+        testArguments[0] = "-op";
+        testArguments[1] = "export_collection";
+        testArguments[2] = "-projectFile";
+        testArguments[3] = "C:\\data\\cnc_gitlab\\work\\dev\\openDJ\\data\\opendj_export.project.xlsx";
+        testArguments[4] = "-env";
+        testArguments[5] = "openDJ";
+        */
+
         if(testArguments != null)
         {
             CmdLine cLine = new CmdLine();

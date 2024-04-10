@@ -1,5 +1,6 @@
 package ch.vilki.jfxldap.backend;
 
+import ch.vilki.jfxldap.VersionKt;
 import ch.vilki.secured.SecureString;
 import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldap.sdk.Modification;
@@ -30,13 +31,14 @@ public class CmdLine implements IProgress {
     public void runCmd(String args[]) throws Exception {
         _configuration = new Config();
         _configuration.openConfiguration(Config.getConfigurationFile());
+        System.out.println("jfxldap " + VersionKt.getSw_version());
         initParser();
         Namespace ns;
 
         try {
             _ns = _parser.parseArgs(args);
         } catch (Exception e1) {
-            logger.error("Exception in runCMD," + e1.getMessage(), e1);
+            System.out.println(e1.getLocalizedMessage());
             _parser.printUsage();
             return;
         }

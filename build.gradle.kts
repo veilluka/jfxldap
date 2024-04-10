@@ -1,3 +1,4 @@
+import org.gradle.internal.impldep.org.eclipse.jgit.util.Paths
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.util.*
 
@@ -91,10 +92,31 @@ jlink{
 }
 
 
-
-fun foo():String{
-  return "ddd"
+tasks.register("createVersionFile") {
+    doLast {
+       val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/Version.kt"
+       var content = "package ch.vilki.jfxldap; \n"
+       content+= """val sw_version="${properties.getProperty("version")}""""
+       File(versionFilePath).writeText(content)
+    }
 }
+
+tasks.register<Copy>("install_local") {
+    dependsOn("installDist")
+    val targetInstallationDir = properties.get("local_installation") as String
+    from("$buildDir/install/jfxldap")
+    into(targetInstallationDir)
+    doFirst {
+        println("Install in $targetInstallationDir")
+        val targetDir = File(targetInstallationDir)
+        if (targetDir.exists()) {
+            File("${targetDir.absolutePath}/lib").deleteRecursively()
+           File("${targetDir.absolutePath}/bin").deleteRecursively()
+
+        }
+    }
+}
+
 
 val compileKotlin: KotlinCompile by tasks
 compileKotlin.kotlinOptions {
