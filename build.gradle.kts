@@ -19,10 +19,16 @@ plugins {
 }
 
 val compileJava: JavaCompile by tasks
+val appVersion: String = property("version") as String
+
 
 application {
     mainModule.set("ch.vilki.jfxldap")
     mainClass.set("ch.vilki.jfxldap.Main")
+}
+
+modularity{
+    moduleVersion(appVersion)
 }
 
 
@@ -54,7 +60,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("org.slf4j:slf4j-simple:2.0.7")
     implementation("commons-cli:commons-cli:1.5.0")
-    implementation(files("lib/secured-properties-3.1.jar"))
+    implementation(files("lib/secured-properties-4.2.jar"))
   	implementation(kotlin("stdlib-jdk8"))
     implementation("com.panemu:tiwulfx:3.4")
 
