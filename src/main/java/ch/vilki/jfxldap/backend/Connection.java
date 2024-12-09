@@ -187,6 +187,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
     private TreeMap<String,Entry> _fileEntries = null;
     private TreeMap<String,Entry> _fileDummies = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
 
+
     public boolean is_fileMode() {
         return _fileMode;
     }
@@ -572,7 +573,6 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
             if(dn == null) return null;
             return _ldapConnection.getEntry(dn);
         }
-
     }
 
     public LDAPResult modify(ModifyRequest modifyRequest) throws Exception {
@@ -688,6 +688,8 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
             return _ldapConnection.search(searchRequest);
         }
     }
+
+
 
     public List<SearchResultEntry> searchEntries(SearchRequest searchRequest) throws LDAPException, IOException, LDIFException {
        if(_fileMode)
@@ -904,6 +906,20 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         return null;
     }
 
+    public boolean entryExists(String dn) throws LDAPException {
+        if(_fileMode)
+        {
+            if(_fileEntries.get(dn) != null) return true;
+        }
+        else
+        {
+            if(!isConnected())  _ldapConnection.reconnect();
+            if(_ldapConnection.getEntry(dn) !=null) return true;
+        }
+        return false;
+    }
+
+
     public SearchResult search(String baseDN, SearchScope scope, Filter filter, String... attributes) throws LDAPSearchException {
 
         if(_fileMode) return fileSearch(baseDN,scope,filter,attributes);
@@ -933,7 +949,19 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         }
     }
 
-    public SearchResult fileSearch (String baseDN, SearchScope scope, Filter filter, String... attributes)  {
+    public SearchResult fileSearchWithDummies (String baseDN, SearchScope scope, Filter filter,  String... attributes)  {
+        SearchResult found = fileSearch(baseDN, scope, filter,attributes);
+        List<SearchResultEntry> resultEntries = new ArrayList<>();
+
+        for(SearchResultEntry e: found.getSearchEntries()) resultEntries.add(e);
+        for(String entryDN: _fileDummies.keySet()){
+            if(entryDN.equalsIgnoreCase(baseDN)) continue;
+            if(entryDN.toLowerCase().contains(baseDN.toLowerCase()))  resultEntries.add(new SearchResultEntry(new Entry(entryDN)));
+        }
+        return new SearchResult(0,ResultCode.SUCCESS,"File OK",baseDN,null,resultEntries,null,resultEntries.size(),0,null);
+    }
+
+    public SearchResult fileSearch (String baseDN, SearchScope scope, Filter filter,  String... attributes)  {
         TreeMap<String,Entry> childEntries = new TreeMap<>();
         List<SearchResultEntry> found = new ArrayList<>();
         List<SearchResultEntry> resultEntries = new ArrayList<>();

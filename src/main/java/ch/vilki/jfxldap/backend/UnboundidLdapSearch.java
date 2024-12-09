@@ -66,11 +66,12 @@ public class UnboundidLdapSearch implements Runnable {
     private Entry _mainEntry;
     private Config _config;
     private String[] _returningAttributes = null;
+    public Boolean fileSearchWithDummies = false;
 
     public List<Entry> get_children() {
        return _children.stream().sorted(EntryComparator).collect(Collectors.toList());
     }
-    private List<Entry> _children = new ArrayList<>();
+    public List<Entry> _children = new ArrayList<>();
     public Entry get_mainEntry() {
         return _mainEntry;
     }
@@ -165,6 +166,7 @@ public class UnboundidLdapSearch implements Runnable {
         _pageSize = 100;
     }
 
+
     @Override
     public void run() {
 
@@ -179,7 +181,9 @@ public class UnboundidLdapSearch implements Runnable {
         if(_connection.is_fileMode())
         {
             try {
-                SearchResult found = _connection.search(_searchDN,_searchScope,_filter,_returningAttributes);
+                SearchResult found = null;
+                if(fileSearchWithDummies) found = _connection.fileSearchWithDummies(_searchDN,_searchScope,_filter,_returningAttributes);
+                else  _connection.search(_searchDN,_searchScope,_filter,_returningAttributes);
                 for (SearchResultEntry entry : found.getSearchEntries())
                 {
                     _children.add(entry);

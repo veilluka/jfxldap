@@ -15,7 +15,8 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
         GREYED_OUT(" -fx-text-fill: #666666;"),
         ERROR("-fx-text-fill: red;"),
         PERSON("-fx-text-fill: #666666;"),
-        PARENT(" -fx-text-fill: #d60e0e;")
+        PARENT(" -fx-text-fill: #d60e0e;"),
+        PLACE_HOLDER("-fx-text-fill: red;"),
     }
 
     private var _dummy = false
@@ -28,7 +29,8 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
     }
     fun setDummy(){
         _dummy=true
-        setStyleProperty(ViewStyle.GREYED_OUT)
+
+        setStyleProperty(ViewStyle.PLACE_HOLDER)
     }
 
     fun getEntry(): Entry? {
@@ -155,5 +157,16 @@ open class CustomEntryItem : Comparable<CustomEntryItem> {
 
     companion object {
         var logger = LogManager.getLogger(CustomEntryItem::class.java)
+
+        public fun resolveDN(dn:String): List<String> {
+            return dn.split(",".toRegex()).dropLastWhile { it.isEmpty() }.toList()
+        }
+
+        fun getAllParentsDN(dn: String): List<String> {
+            val components = dn.split(",")
+            return components.indices.map { i ->
+                components.subList(i, components.size).joinToString(",")
+            }
+        }
     }
 }

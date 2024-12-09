@@ -244,6 +244,7 @@ public class CompareTree extends TreeView<CompResult> implements Cloneable {
         if (parent == null) return;
         try {
             UnboundidLdapSearch reader = new UnboundidLdapSearch(_config, _sourceConnection, parent.getValue().get_dn(), _sourceFilter.toString(), null);
+            if(_sourceConnection.is_fileMode()) reader.fileSearchWithDummies = true;
             reader.run();
             _nrOfEntries = reader.get_children().size();
             Comparator<Entry> comparator = new Comparator<Entry>() {

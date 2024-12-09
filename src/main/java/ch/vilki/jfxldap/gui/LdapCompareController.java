@@ -369,6 +369,11 @@ public class LdapCompareController implements IProgress, ILoader {
                     _observableDifferentEntryAttributes.setAll(_observedEntry.getValue().getDifferentAttributes());
                 _observableDifferentEntryAttributes.sort(Comparator.comparing(String::toString));
                 _entryDiffView.updateValue(_observedEntry.getValue(), _checkBoxShowEqual.isSelected());
+                _activeCompareTree.getSelectionModel().getSelectedItems().forEach(x->{
+                   if(x.getValue().get_entry_type().equals(CompResult.ENTRY_TYPE.SOURCE)){
+
+                   }
+                });
                 if (_observedEntry.getValue().get_entry_type().equals(CompResult.ENTRY_TYPE.SOURCE)) {
                     _entryContextMenu.getItems().addAll(_entryMenuCopyToSource, _entryMenuCopyToTarget,
                             _entryMenuCopyTreeToSource, _entryMenuCopyTreeToTarget);

@@ -9,6 +9,7 @@ import com.unboundid.ldif.LDIFException;
 import com.unboundid.ldif.LDIFReader;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -179,6 +180,7 @@ public class LdapExploreController implements IProgress, ILoader {
                         if (!item.is_dummy()) {
                             setGraphic(Icons.get_iconInstance().getObjectType(item.get_objectClass()));
                         }
+                        else  styleProperty().set(item.get_styleProperty().getValue());
                     }
                 };
             }
@@ -565,7 +567,7 @@ public class LdapExploreController implements IProgress, ILoader {
          Connection cc = new Connection(selectedFile.getAbsolutePath(),this,false);
          cc.set_fileMode(true);
          set_currentConnection(cc);
-        CustomEntryItem CustomEntryItem = new CustomEntryItem("cn=" + selectedFile.getAbsolutePath());
+        CustomEntryItem CustomEntryItem = new CustomEntryItem("cn=" + selectedFile.getName());
         try {
             List<Attribute> newAttributes = new ArrayList<>();
             newAttributes.add(new Attribute("TYPE", "DUMMY"));
@@ -689,16 +691,20 @@ public class LdapExploreController implements IProgress, ILoader {
             String dummyDN = entry.getDN().replace(builder.toString() + ",", "");
             CustomEntryItem CustomEntryItem = new CustomEntryItem(dummyDN);
             CustomEntryItem.setDummy();
+
+            CustomEntryItem.set_dn(new SimpleStringProperty(dummyDN));
             List<Attribute> newAttributes = new ArrayList<>();
-            Attribute attribute = new Attribute("description", "this is dummy entry");
+            Attribute attribute = new Attribute("description", "this entry is not in file");
             newAttributes.add(attribute);
             Entry entry1 = new Entry(dummyDN, newAttributes);
             entry1.setDN(dummyDN);
             CustomEntryItem.setEntry(entry1);
             CustomEntryItem.setRdn(split[split.length - 1]);
             child = new TreeItem<>(CustomEntryItem);
+
             child.expandedProperty().addListener(_expandedListenerFile);
             treeEntry.getChildren().add(child);
+
         }
         addEntriesFromLdif(child, entry, builder.toString());
     }
@@ -1019,10 +1025,8 @@ public class LdapExploreController implements IProgress, ILoader {
                             styleProperty().set(null);
                             return;
                         }
-                        if (item != null) {
-                            styleProperty().bind(item.get_styleProperty());
-                            textProperty().bind(item._rdn);
-                        }
+                        styleProperty().bind(item.get_styleProperty());
+                        textProperty().bind(item._rdn);
                         super.updateItem(item, empty);
                     }
                 };
