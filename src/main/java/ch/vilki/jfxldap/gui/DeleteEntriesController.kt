@@ -101,7 +101,69 @@ class DeleteEntriesController : ILoader, IProgress {
             Main._ctManager._progressWindowController._stage.show()
             _itemsToDelete = _listViewResults.items.stream().map { x: TextField -> x.text }
                 .toList()
-            Thread(deleteEntries).start()
+            
+            // Create a new Task instance each time instead of reusing the existing one
+            val deleteTask = object : Task<Void>() {
+                @Throws(Exception::class)
+                override fun call(): Void? {
+                    var done = 0
+                    val nrOfEntries = _itemsToDelete?.size?.toDouble() ?: 1.0
+                    
+                    // Update progress less frequently for large batches
+                    val updateFrequency = when {
+                        nrOfEntries > 1000 -> 50  // For very large operations, update every 50
+                        nrOfEntries > 100 -> 20   // For large operations, update every 20
+                        else -> 10                // For small operations, keep at 10
+                    }
+                    
+                    try {
+                        for (dn in _itemsToDelete!!) {
+                            done++
+                            try {
+                                // Make sure connection is active before deleting
+                                if (_currentConnection?.isConnected() != true) {
+                                    _currentConnection?.connect()
+                                }
+                                _currentConnection?.delete(dn)
+                                
+                                // Update progress at calculated frequency
+                                if (done % updateFrequency == 0) {
+                                    val prog = done.toDouble() / nrOfEntries
+                                    setProgress(prog, "Deleted $done of ${nrOfEntries.toInt()} entries")
+                                }
+                            } catch (e: Exception) {
+                                logger.error("Error deleting entry $dn: ${e.message}")
+                                // Continue with next entry instead of stopping the entire process
+                                Platform.runLater {
+                                    // Just log the error, don't show dialog for every entry to avoid UI freeze
+                                    Main._ctManager._progressWindowController.appendToLog(
+                                        "Error deleting entry $dn: ${e.message}"
+                                    )
+                                }
+                            }
+                        }
+                    } catch (e: Exception) {
+                        logger.error("Fatal error during deletion: ${e.message}", e)
+                        Platform.runLater {
+                            Main._ctManager._progressWindowController._stage.close()
+                            GuiHelper.EXCEPTION("Delete operation error", e.message, e)
+                        }
+                    } finally {
+                        realDeleteDone = true
+                        Platform.runLater {
+                            Main._ctManager._progressWindowController._stage.close()
+                            _stage.show()
+                            _buttonDelete.isDisable = true
+                            _listViewResults.items.clear()
+                        }
+                    }
+                    return null
+                }
+            }
+            
+            val executorService = Executors.newSingleThreadExecutor()
+            executorService.execute(deleteTask)
+            executorService.shutdown() // Allow the executor to terminate after task completes
             return
         }
         try {
@@ -151,30 +213,6 @@ class DeleteEntriesController : ILoader, IProgress {
 
     override fun setProgress(taskName: String?, progress: Double) {
         Platform.runLater { Main._ctManager._progressWindowController.setProgress(progress, taskName) }
-    }
-
-    var deleteEntries: Task<Void> = object : Task<Void>() {
-        @Throws(Exception::class)
-        override fun call(): Void? {
-            var done = 0
-            val nrOfEntries = _itemsToDelete?.size?.toDouble() ?: 1.0
-            for (dn in _itemsToDelete!!) {
-                done++
-                _currentConnection?.delete(dn)
-                if (done % 10 == 0) {
-                    val prog = done.toDouble() / nrOfEntries
-                    setProgress(prog, dn)
-                }
-            }
-            realDeleteDone = true
-            Platform.runLater {
-                Main._ctManager._progressWindowController._stage.close()
-                _stage.show()
-                _buttonDelete.isDisable = true
-                _listViewResults.items.clear()
-            }
-            return null
-        }
     }
 
     companion object {

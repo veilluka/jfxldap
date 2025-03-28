@@ -182,33 +182,44 @@ public class SearchResultController implements ILoader, IProgress {
         _main._ctManager._progressWindowController.clearProgressWindow();
         _main._ctManager._progressWindowController._stage.show();
 
+        // Store a reference to listToBeDeleted for UI update
+        final List<TreeItem<SearchEntry>> finalListToBeDeleted = new ArrayList<>(listToBeDeleted);
+
         executor.execute(()->
         {
-            AtomicInteger deleted = new AtomicInteger(0);
-            listToBeDeleted.stream().forEach(item->{
-                try {
-                    _main._ctManager._ldapSourceExploreCtrl.get_currentConnection().delete(item.getValue().getDn());
-                }
-                catch (Exception e)
-                {
-                    Platform.runLater(()->
+            try {
+                AtomicInteger deleted = new AtomicInteger(0);
+                listToBeDeleted.stream().forEach(item->{
+                    try {
+                        _main._ctManager._ldapSourceExploreCtrl.get_currentConnection().delete(item.getValue().getDn());
+                        deleted.incrementAndGet();
+                    }
+                    catch (Exception e)
                     {
-                        GuiHelper.EXCEPTION("Delete entry error",e.getMessage(),e);
-                        _main._ctManager._progressWindowController._stage.close();
-                    });
-                }
-                if(deleted.get() % 20 == 0)
-                Platform.runLater(()->_main._ctManager._progressWindowController.setProgress(
-                        (double) deleted.incrementAndGet()/(double)listToBeDeleted.size(),"Deleted entries" + deleted.get()));
-            });
-
+                        Platform.runLater(()->
+                        {
+                            GuiHelper.EXCEPTION("Delete entry error",e.getMessage(),e);
+                        });
+                    }
+                    if(deleted.get() % 20 == 0)
+                    Platform.runLater(()->_main._ctManager._progressWindowController.setProgress(
+                            (double) deleted.get()/(double)listToBeDeleted.size(),"Deleted entries " + deleted.get()));
+                });
+            } finally {
+                Platform.runLater(()-> {
+                    _main._ctManager._progressWindowController._stage.close();
+                    // Update UI after deletion completes
+                    for(TreeItem item: finalListToBeDeleted)
+                    {
+                        if(item.getParent() != null) {
+                            item.getParent().getChildren().remove(item);
+                        }
+                    }
+                    _searchTree.refresh();
+                });
+                executor.shutdown();
+            }
         });
-        _main._ctManager._progressWindowController._stage.close();
-        for(TreeItem item: listToBeDeleted)
-        {
-            item.getParent().getChildren().remove(item);
-        }
-        _searchTree.refresh();
     }
 
     @FXML

@@ -50,6 +50,17 @@ public class ProgressWindowController implements ILoader {
        _textAreaMessage.appendText("\n");
    }
 
+   /**
+    * Appends a message to the log area without updating the progress bar
+    * @param message The message to append to the log
+    */
+   public void appendToLog(String message)
+   {
+       if(_textAreaMessage.getLength() > 10000) _textAreaMessage.clear();
+       _textAreaMessage.appendText(message);
+       _textAreaMessage.appendText("\n");
+   }
+
 
     @Override
     public void setMain(Main main) {
