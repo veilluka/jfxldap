@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.control.RadioButton?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" prefHeight="448.0" prefWidth="711.0" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.DeleteEntriesController">
+
+    <children>
+      <Separator prefHeight="0.0" prefWidth="520.0" />
+      <HBox alignment="CENTER" minHeight="30.0">
+         <children>
+            <RadioButton fx:id="_radioButtonSelectedWithChildren" mnemonicParsing="false" text="Selected and Children">
+               <HBox.margin>
+                  <Insets bottom="2.0" left="10.0" right="10.0" top="7.0" />
+               </HBox.margin>
+            </RadioButton>
+            <RadioButton fx:id="_radioButtonOnlyChildren" mnemonicParsing="false" text="Only Children">
+               <HBox.margin>
+                  <Insets bottom="2.0" left="30.0" right="10.0" top="7.0" />
+               </HBox.margin>
+            </RadioButton>
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+         </VBox.margin>
+      </HBox>
+      <HBox fx:id="_hboxFilter" maxWidth="1.7976931348623157E308">
+         <padding>
+            <Insets bottom="5.0" left="10.0" top="10.0" />
+         </padding>
+         <children>
+            <Label text="LDAP Filter Children ">
+               <HBox.margin>
+                  <Insets left="5.0" right="10.0" />
+               </HBox.margin>
+            </Label>
+         </children>
+      </HBox>
+      <Separator maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+         <padding>
+            <Insets bottom="3.0" top="3.0" />
+         </padding></Separator>
+      <HBox alignment="BASELINE_RIGHT">
+         <children>
+            <Button fx:id="_buttonCancel" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Cancel">
+               <HBox.margin>
+                  <Insets right="50.0" />
+               </HBox.margin></Button>
+            <Button fx:id="_buttonDelete" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Delete">
+               <HBox.margin>
+                  <Insets right="10.0" />
+               </HBox.margin>
+            </Button>
+            <Separator maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308">
+               <padding>
+                  <Insets bottom="3.0" top="3.0" />
+               </padding>
+            </Separator>
+         </children>
+         <padding>
+            <Insets bottom="5.0" top="5.0" />
+         </padding>
+      </HBox>
+      <ListView fx:id="_listViewResults" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS" />
+    </children>
+</VBox>

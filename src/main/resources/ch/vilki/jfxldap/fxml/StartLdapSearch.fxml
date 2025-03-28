@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="510.0" prefWidth="759.0" xmlns="http://javafx.com/javafx/8.0.171" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.StartSearchController">
+   <children>
+      <Label alignment="CENTER" contentDisplay="TOP" maxWidth="1.7976931348623157E308" text="BASE DN">
+         <font>
+            <Font name="System Bold" size="12.0" />
+         </font></Label>
+      <TextField fx:id="_textFieldSearchDN">
+         <VBox.margin>
+            <Insets left="5.0" right="5.0" />
+         </VBox.margin>
+      </TextField>
+      <Separator prefHeight="20.0" prefWidth="759.0" />
+      <VBox prefHeight="75.0" prefWidth="600.0">
+         <children>
+            <HBox alignment="CENTER" prefHeight="45.0" prefWidth="703.0">
+               <children>
+                  <Label prefHeight="17.0" prefWidth="118.0" text="Text-Search ">
+                     <font>
+                        <Font name="System Bold" size="12.0" />
+                     </font>
+                     <padding>
+                        <Insets left="5.0" right="5.0" />
+                     </padding>
+                  </Label>
+                  <TextField fx:id="_textFieldSearchValue" maxWidth="1.7976931348623157E308" prefHeight="26.0" prefWidth="541.0">
+                     <HBox.margin>
+                        <Insets right="10.0" />
+                     </HBox.margin>
+                  </TextField>
+               </children>
+            </HBox>
+            <HBox alignment="CENTER_RIGHT" prefHeight="32.0" prefWidth="600.0" spacing="20.0">
+               <children>
+                  <CheckBox fx:id="_checkBoxNOTContains" mnemonicParsing="false" text="NOT" HBox.hgrow="ALWAYS">
+                     <font>
+                        <Font name="System Bold" size="12.0" />
+                     </font></CheckBox>
+                  <CheckBox fx:id="_checkBoxSearchExactMatch" mnemonicParsing="false" text="Exact Match" HBox.hgrow="ALWAYS" />
+                  <CheckBox fx:id="_checkBoxSearchIgnoreCase" alignment="CENTER_RIGHT" mnemonicParsing="false" selected="true" text="Ignore Case " HBox.hgrow="ALWAYS" />
+                  <CheckBox fx:id="_checkBoxSearchRegex" mnemonicParsing="false" text="Regex" HBox.hgrow="ALWAYS" />
+                  <CheckBox fx:id="_checkBoxDeadLink" mnemonicParsing="false" text="DN Linkcheck" HBox.hgrow="ALWAYS" />
+               </children>
+               <VBox.margin>
+                  <Insets />
+               </VBox.margin>
+               <padding>
+                  <Insets left="5.0" right="20.0" />
+               </padding>
+            </HBox>
+         </children>
+      </VBox>
+      <Separator prefHeight="22.0" prefWidth="703.0" VBox.vgrow="ALWAYS">
+         <VBox.margin>
+            <Insets bottom="10.0" />
+         </VBox.margin>
+      </Separator>
+       <fx:include fx:id="embeddedFilterView" source="FilterWindow.fxml" />
+      <Separator prefWidth="200.0" />
+      <HBox alignment="CENTER_RIGHT" prefHeight="43.0" prefWidth="759.0">
+         <children>
+            <Button fx:id="_buttonCancel" maxHeight="1.7976931348623157E308" mnemonicParsing="false" prefHeight="58.0" prefWidth="105.0" text="Cancel">
+               <HBox.margin>
+                  <Insets right="50.0" />
+               </HBox.margin>
+            </Button>
+            <Button fx:id="_buttonRunSearch" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" mnemonicParsing="false" prefHeight="58.0" prefWidth="114.0" text="Search">
+               <HBox.margin>
+                  <Insets right="10.0" />
+               </HBox.margin>
+            </Button>
+         </children>
+      </HBox>
+   </children>
+</VBox>
