@@ -1,6 +1,5 @@
 package ch.vilki.jfxldap.gui;
 
-
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.*;
 import com.unboundid.ldap.sdk.*;
@@ -748,7 +747,16 @@ public class LdapExploreController implements IProgress, ILoader {
 
     @Override
     public void setProgress(double progress, String description) {
-        Platform.runLater(() -> _progressController.setProgress(progress, description));
+        Platform.runLater(() -> {
+            if (_progressController != null) _progressController.setProgress(progress, description);
+        });
+    }
+
+    @Override
+    public void setProgress(String taskName, double progress) {
+        Platform.runLater(() -> {
+            if (_progressController != null) _progressController.setProgress(progress, taskName);
+        });
     }
 
     public void switch2CollectionTree() {
@@ -768,7 +776,33 @@ public class LdapExploreController implements IProgress, ILoader {
         _buttonOpenFile.setDisable(false);
     }
 
-    @Override
+    public void refreshTree_checkMissingEntries(TreeItem<CustomEntryItem> entryTreeItem) {
+        // check missing first   //entryTreeItem.getValue().getEntry()
+        boolean missing = false;
+        try {
+            Entry entry = _currConnection.getEntry(entryTreeItem.getValue().getDn());
+            if (entry == null) missing = true;
+        } catch (Exception e) {
+            missing = true;
+        }
+        if (missing) {
+            if (entryTreeItem.getParent() != null) {
+                Platform.runLater(() -> {
+                    if (entryTreeItem.getParent() != null) {
+                        entryTreeItem.getParent().getChildren().remove(entryTreeItem);
+                    }
+                });
+            }
+        } else {
+            // Create a safe copy of children to iterate over
+            List<TreeItem<CustomEntryItem>> childrenToCheck = new ArrayList<>(entryTreeItem.getChildren());
+            for (TreeItem<CustomEntryItem> entry : childrenToCheck) {
+                refreshTree_checkMissingEntries(entry);
+            }
+        }
+        Platform.runLater(() -> _treeView.refresh());
+    }
+
     public void signalTaskDone(String taskName, String description, Exception e) {
         Platform.runLater(()->{
             List<CustomEntryItem> items = new ArrayList();
@@ -887,10 +921,10 @@ public class LdapExploreController implements IProgress, ILoader {
 
     private void removeListerners(TreeItem<?> item) {
         if(item==null || item.getChildren() == null) return;
-        for (TreeItem child : item.getChildren()) {
-            child.expandedProperty().removeListener(_expandedListenerOnline);
-            child.expandedProperty().unbind();
-            removeListerners(child);
+        for(TreeItem childItem : item.getChildren()){
+            childItem.expandedProperty().removeListener(_expandedListenerOnline);
+            childItem.expandedProperty().unbind();
+            removeListerners(childItem);
         }
     }
 
@@ -950,22 +984,6 @@ public class LdapExploreController implements IProgress, ILoader {
         _textFieldLdapFilter.set_currConnection(_currConnection);
     }
 
-    public void refreshTree_checkMissingEntries(TreeItem<CustomEntryItem> entryTreeItem) {
-        // check missing first   //entryTreeItem.getValue().getEntry()
-        boolean missing = false;
-        try {
-            Entry entry = _currConnection.getEntry(entryTreeItem.getValue().getDn());
-            if (entry == null) missing = true;
-        } catch (Exception e) {
-            missing = true;
-        }
-        if (missing) entryTreeItem.getParent().getChildren().remove(entryTreeItem);
-        else {
-            for (TreeItem<CustomEntryItem> entry : entryTreeItem.getChildren()) refreshTree_checkMissingEntries(entry);
-        }
-        _treeView.refresh();
-    }
-
     public void refreshTree_checkAddedEntries(TreeItem<CustomEntryItem> entryTreeItem) {
         String searchDN = entryTreeItem.getValue().getDn();
         Set<String> childrenDN = new HashSet<>();
@@ -1000,12 +1018,6 @@ public class LdapExploreController implements IProgress, ILoader {
         } catch (Exception e) { }
     }
 
-
-
-    @Override
-    public void setProgress(String taskName, double progress) { }
-
-    @Override
     public void setMain(Main main) {
         _main = main;
         _choiceBoxEnviroment.setItems(_main._ctManager._settingsController._connectionObservableList);

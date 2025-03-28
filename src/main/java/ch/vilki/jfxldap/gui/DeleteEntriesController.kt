@@ -151,7 +151,16 @@ class DeleteEntriesController : ILoader, IProgress {
                     } finally {
                         realDeleteDone = true
                         Platform.runLater {
+                            // Make sure the progress window gets closed
                             Main._ctManager._progressWindowController._stage.close()
+                            
+                            // Refresh the tree view to show the updated state after deletion
+                            if (_selectedEntry != null) {
+                                // Refresh both explorers to update the tree views
+                                Main._ctManager._ldapSourceExploreCtrl.refreshTree()
+                                Main._ctManager._ldapTargetExploreController?.refreshTree()
+                            }
+                            
                             _stage.show()
                             _buttonDelete.isDisable = true
                             _listViewResults.items.clear()
