@@ -11,7 +11,10 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -158,6 +161,13 @@ public class LdapExploreController implements IProgress, ILoader {
         HBox.setHgrow(_textFieldLdapFilter, Priority.ALWAYS);
         _textFieldLdapFilter.alignmentProperty().setValue(Pos.BOTTOM_LEFT);
         HBox.setMargin(_textFieldLdapFilter, new Insets(5, 5, 1, 2));
+
+        // Add key event handler for F5 refresh
+        _treeView.setOnKeyPressed(event -> {
+            if (event.getCode() == KeyCode.F5) {
+                refreshSelectedEntry();
+            }
+        });
 
         _treeView.setCellFactory(new Callback<>() {
             @Override
@@ -1075,4 +1085,92 @@ public class LdapExploreController implements IProgress, ILoader {
                 });
     }
 
+    /**
+     * Refreshes the selected entry and all expanded entries below it.
+     * This method is triggered when F5 is pressed on a selected entry.
+     */
+    public void refreshSelectedEntry() {
+        if (_currConnection == null || _observedEntry == null) return;
+        
+        logger.info("Refreshing selected entry: {}", _observedEntry.getValue().getDn());
+        
+        // Create a progress indicator
+        Platform.runLater(() -> {
+            _progressController.setProgress(0, "Refreshing entry: " + _observedEntry.getValue().getDn());
+            _progressStage.show();
+        });
+        
+        // Use a background thread for the refresh
+        Task<Void> refreshTask = new Task<Void>() {
+            @Override
+            protected Void call() throws Exception {
+                try {
+                    // Check if selected entry still exists and update it
+                    checkAndRefreshEntry(_observedEntry);
+                    
+                    Platform.runLater(() -> {
+                        // Refresh the tree view UI
+                        _treeView.refresh();
+                        // Hide progress window
+                        _progressStage.hide();
+                    });
+                } catch (Exception e) {
+                    logger.error("Error refreshing entry: " + e.getMessage(), e);
+                    Platform.runLater(() -> {
+                        GuiHelper.EXCEPTION("Refresh Error", "Error refreshing entry", e);
+                        _progressStage.hide();
+                    });
+                }
+                return null;
+            }
+        };
+        
+        // Execute the refresh task
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(refreshTask);
+        executor.shutdown();
+    }
+    
+    /**
+     * Recursively checks and refreshes an entry and its expanded children.
+     *
+     * @param entryTreeItem The entry to refresh
+     */
+    private void checkAndRefreshEntry(TreeItem<CustomEntryItem> entryTreeItem) {
+        if (entryTreeItem == null) return;
+        
+        try {
+            // Check if entry exists and update it
+            Entry entry = _currConnection.getEntry(entryTreeItem.getValue().getDn());
+            if (entry != null) {
+                // Update the entry with fresh data
+                entryTreeItem.getValue().setEntry(entry);
+                
+                // Only process expanded children
+                if (entryTreeItem.isExpanded()) {
+                    // Create a copy of children to avoid concurrent modification
+                    List<TreeItem<CustomEntryItem>> childrenCopy = new ArrayList<>(entryTreeItem.getChildren());
+                    
+                    // Check for new children that might have been added
+                    refreshTree_checkAddedEntries(entryTreeItem);
+                    
+                    // Recursively process each expanded child
+                    for (TreeItem<CustomEntryItem> childItem : childrenCopy) {
+                        if (childItem.isExpanded()) {
+                            checkAndRefreshEntry(childItem);
+                        }
+                    }
+                }
+            } else {
+                // Entry no longer exists, remove it if it has a parent
+                if (entryTreeItem.getParent() != null) {
+                    Platform.runLater(() -> {
+                        entryTreeItem.getParent().getChildren().remove(entryTreeItem);
+                    });
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error checking entry " + entryTreeItem.getValue().getDn() + ": " + e.getMessage(), e);
+        }
+    }
 }
