@@ -13,3 +13,5 @@ build/
 .idea/
 out/
 
+/bin/*
+/.vscode/*

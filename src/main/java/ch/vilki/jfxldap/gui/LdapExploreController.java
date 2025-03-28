@@ -277,9 +277,15 @@ public class LdapExploreController implements IProgress, ILoader {
             return;
         try {
             Entry entry = get_currentConnection().getEntry(treeItem.getValue().getEntry().getDN(), new String[]{attributeName});
-            Platform.runLater(() -> _progressController.setProgress(0, entry.getDN()));
-            treeItem.getValue().setEntry(entry);
-            treeItem.getValue().setDisplayAttribute(attributeName);
+            Platform.runLater(() -> {
+                String dn = "";
+                if(entry!=null) dn = entry.getDN();
+                _progressController.setProgress(0, dn);
+            });
+            if (treeItem.getValue() != null && entry != null) {
+                treeItem.getValue().setEntry(entry);
+                treeItem.getValue().setDisplayAttribute(attributeName);
+            }
             _treeView.refresh();
         } catch (LDAPException e) {
             logger.error(e);

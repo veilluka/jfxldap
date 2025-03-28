@@ -325,8 +325,11 @@ public class GuiHelper {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
         AutoCompleteTextField autoCompleteTextField = new AutoCompleteTextField();
-        autoCompleteTextField.getEntries().addAll(autoComplete);
-
+        autoCompleteTextField.getEntries().addAll(
+            autoComplete.stream()
+            .map(String::toLowerCase)
+                    .collect(Collectors.toList())
+        );
         final TextField[] text = {autoCompleteTextField};
         text[0].setPromptText(promptText);
 

@@ -282,7 +282,12 @@ public class CollectionImport implements IProgress {
             }
             logger.debug("Importing entry now->" + entry.getDN());
             if (import_options.equals(IMPORT_OPTIONS.ADD_OR_MODIFY) || import_options.equals(IMPORT_OPTIONS.ADD_ONLY))
-                connection.add(entry);
+                try {
+                    connection.add(entry);
+                } catch (LDAPException e) {
+                    logger.error("Exception during add entry " + entry.toLDIFString(), e);
+                }
+
         }
     }
 

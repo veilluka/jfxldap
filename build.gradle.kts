@@ -59,6 +59,7 @@ dependencies {
     implementation( "org.apache.logging.log4j:log4j-core:2.23.1")
     implementation("org.slf4j:slf4j-api:2.0.7")
     implementation("org.slf4j:slf4j-simple:2.0.7")
+    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.23.1")
     implementation("commons-cli:commons-cli:1.5.0")
     implementation(files("lib/secured-properties-4.2.jar"))
   	implementation(kotlin("stdlib-jdk8"))
@@ -109,6 +110,7 @@ tasks.register("createVersionFile") {
 
 tasks.register<Copy>("install_local") {
     dependsOn("installDist")
+
     val targetInstallationDir = properties.get("local_installation") as String
     from("$buildDir/install/jfxldap")
     into(targetInstallationDir)
