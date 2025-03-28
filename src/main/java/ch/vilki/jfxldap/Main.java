@@ -17,10 +17,12 @@ import javafx.stage.Stage;
 import jfxtras.styles.jmetro.JMetro;
 import jfxtras.styles.jmetro.Style;
 import org.apache.logging.log4j.LogManager;
+import ch.vilki.jfxldap.ApplicationVersion;
 
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Runtime.Version;
 import java.util.Properties;
 
 
@@ -43,6 +45,7 @@ public class Main extends Application {
         readConfiguration();
         _ctManager =new ControllerManager(_main);
         _ctManager.initControllers();
+        
         FXMLLoader loader = new FXMLLoader(getClass().getResource(ControllerManager.Companion.fxmlDir("MainWindow.fxml")));
         Parent root = loader.load();
 
@@ -50,7 +53,7 @@ public class Main extends Application {
         Controller controller = (Controller )ns.get("controller");
         controller.initMenu();
 
-        primaryStage.setTitle("jfxLDAP by Bauer Vedran [" + VersionKt.getSw_version() + "]");
+        primaryStage.setTitle("jfxLDAP by Bauer Vedran [" + AppVersion.version + "]");
         //JMetro jMetro = new JMetro(root, Style.LIGHT);
         Screen screen = Screen.getPrimary();
         Rectangle2D bounds = screen.getVisualBounds();

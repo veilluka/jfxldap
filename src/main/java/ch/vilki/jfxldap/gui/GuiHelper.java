@@ -180,7 +180,8 @@ public class GuiHelper {
             alert.getDialogPane().setContent(expContent);
         }
         alert.showAndWait();
-        if(alert.getResult().equals(ButtonType.OK)) return  true;
+        ButtonType result = alert.getResult();
+        if(result != null && result.equals(ButtonType.OK)) return  true;
         return  false;
     }
 

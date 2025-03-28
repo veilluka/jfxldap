@@ -726,7 +726,7 @@ public class LdapExploreController implements IProgress, ILoader {
         String selectedValue = connection.getBaseDN();
         if (selectedValue == null && context == null) {
             Filter f = Filter.create("(objectclass=*)");
-            SearchResult found = connection.search("", SearchScope.ONE, f, null);
+            SearchResult found = connection.search("", SearchScope.ONE, f, (String[]) null);
             if (found != null && found.getEntryCount() > 0) {
                 context = new String[found.getEntryCount()];
                 for (int i = 0; i < found.getEntryCount(); i++) {

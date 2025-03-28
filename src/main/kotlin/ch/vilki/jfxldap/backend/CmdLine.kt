@@ -1,6 +1,6 @@
 package ch.vilki.jfxldap.backend
 
-import ch.vilki.jfxldap.ApplicationVersion
+import ch.vilki.secured.ApplicationVersion
 import ch.vilki.secured.SecureString
 import com.unboundid.ldap.sdk.LDAPException
 import com.unboundid.ldap.sdk.Modification
@@ -14,11 +14,8 @@ import org.apache.logging.log4j.Logger
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.ArrayList
-import java.util.Scanner
-import ch.vilki.jfxldap.SomeVersion 
+import java.util.*
 
 class CmdLine : IProgress {
     companion object {
@@ -31,10 +28,10 @@ class CmdLine : IProgress {
 
     @Throws(Exception::class)
     fun runCmd(args: Array<String>) {
-        val d= SomeVersion.version
+
         _configuration = Config()
         _configuration.openConfiguration(Config.configurationFile)
-        //println("jfxldap ${Version.sw_version}")
+        println("jfxldap ${ApplicationVersion.VERSION}")
         initParser()
 
         try {

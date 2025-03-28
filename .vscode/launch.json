@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Main",
+            "request": "launch",
+            "mainClass": "ch.vilki.jfxldap.Main",
+            "projectName": "jfxldap"
+        },
+        {
+            "type": "java",
+            "name": "Launch Main",
+            "request": "launch",
+            "mainClass": "ch.vilki.jfxldap.Main",
+            "projectName": "jfxldap",
+            "classPaths": [
+                "${workspaceFolder}/build/classes/java/main",
+                "${workspaceFolder}/build/resources/main",
+                "${workspaceFolder}/build/libs/*",
+                "${workspaceFolder}/libs/*",
+                "${GRADLE_RUNTIME_CLASSPATH}"
+            ],
+            "env": {
+                "GRADLE_RUNTIME_CLASSPATH": "${command:gradle.getClassPath}"
+            }
+        }
+    ]
+}

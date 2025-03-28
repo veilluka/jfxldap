@@ -13,8 +13,9 @@ plugins {
     application
     id("org.openjfx.javafxplugin") version "0.0.14"
     id("org.beryx.jlink") version "2.22.1"
-    id ("org.javamodularity.moduleplugin") version "1.8.12"
-    kotlin("jvm") version "1.8.21"
+    //id ("org.javamodularity.moduleplugin") version "1.8.15"
+    id("org.jetbrains.kotlin.jvm") version "2.1.20"
+   
 
 }
 
@@ -23,13 +24,35 @@ val appVersion: String = property("version") as String
 
 
 application {
-    mainModule.set("ch.vilki.jfxldap")
+    //mainModule.set("ch.vilki.jfxldap")
     mainClass.set("ch.vilki.jfxldap.Main")
+    /* 
+    applicationDefaultJvmArgs = listOf(
+        "--add-modules", "ALL-MODULE-PATH",
+        "--add-reads", "ch.vilki.jfxldap=ALL-UNNAMED",
+        "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+        "--add-opens", "java.base/java.util=ALL-UNNAMED",
+        "--add-opens", "java.base/java.net=ALL-UNNAMED"
+    )
+    */ 
 }
 
-modularity{
-    moduleVersion(appVersion)
+// Configure Java and Kotlin toolchains
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
 }
+
+kotlin {
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    }
+}
+
+//modularity{
+//    moduleVersion(appVersion)
+//}
 
 
 repositories {
@@ -62,7 +85,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.23.1")
     implementation("commons-cli:commons-cli:1.5.0")
     implementation(files("lib/secured-properties-4.2.jar"))
-  	implementation(kotlin("stdlib-jdk8"))
+  	implementation(kotlin("stdlib"))
     implementation("com.panemu:tiwulfx:3.4")
 
 
@@ -89,7 +112,7 @@ jlink{
     }
     forceMerge("log4j-api")
     addExtraDependencies("javafx","log4j")
-    imageZip.set(project.file("${project.buildDir}/image-zip/jfxldap-image.zip"))
+    imageZip.set(project.file("${layout.buildDirectory.get()}/image-zip/jfxldap-image.zip"))
     jpackage {
         if (org.gradle.internal.os.OperatingSystem.current().isWindows) {
             installerOptions.addAll(listOf("--win-per-user-install", "--win-dir-chooser", "--win-menu", "--win-shortcut"))
@@ -97,7 +120,6 @@ jlink{
         }
     }
 }
-
 
 tasks.register("createVersionFile") {
     doLast {
@@ -112,7 +134,7 @@ tasks.register<Copy>("install_local") {
     dependsOn("installDist")
 
     val targetInstallationDir = properties.get("local_installation") as String
-    from("$buildDir/install/jfxldap")
+    from("${layout.buildDirectory.get()}/install/jfxldap")
     into(targetInstallationDir)
     doFirst {
         println("Install in $targetInstallationDir")
@@ -123,14 +145,4 @@ tasks.register<Copy>("install_local") {
 
         }
     }
-}
-
-
-val compileKotlin: KotlinCompile by tasks
-compileKotlin.kotlinOptions {
-    jvmTarget = "17"
-}
-val compileTestKotlin: KotlinCompile by tasks
-compileTestKotlin.kotlinOptions {
-    jvmTarget = "17"
 }
