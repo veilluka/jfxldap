@@ -23,6 +23,7 @@ class ControllerManager(main: Main) {
     lateinit var _startLdapCompareController: StartLdapCompareController
     lateinit var _exportWindowController: ExportWindowController
     lateinit var _showEntryController: ShowEntryController
+    lateinit var _exportAttributeController: ExportAttributeController
 
     lateinit var _modificationsViewController: ModificationsViewController
     lateinit var _deleteEntriesController: DeleteEntriesController
@@ -71,6 +72,7 @@ class ControllerManager(main: Main) {
         _modificationsViewController = initController("ModificationView.fxml") as ModificationsViewController
         _deleteEntriesController = initController("DeleteEntriesWindow.fxml") as DeleteEntriesController
         _keyStoreController = initController("KeyStoreWindow.fxml") as KeyStoreController
+        _exportAttributeController = ExportAttributeController()
 
         _settingsController.readConfiguration()
 

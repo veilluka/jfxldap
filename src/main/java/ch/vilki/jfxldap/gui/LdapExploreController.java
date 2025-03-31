@@ -92,6 +92,7 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _deleteEntry = new MenuItem(TAB + "Delete", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REMOVE));
     MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
     MenuItem _verifyPassword = new MenuItem(TAB + "Verify Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
+    MenuItem _exportAttribute = new MenuItem(TAB + "Export Attribute", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
 
 
     /*------------- PROGRESS PANE ----------------------- */
@@ -387,7 +388,8 @@ public class LdapExploreController implements IProgress, ILoader {
         });
         _setPassword.setOnAction(e -> setUserPassword());
         _verifyPassword.setOnAction(e -> verifyPassword());
-        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword, _verifyPassword);
+        _exportAttribute.setOnAction(e -> _main._ctManager._exportAttributeController.showExportAttributeWindow(get_currentConnection(), _observedEntry.getValue().getDn()));
+        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword, _verifyPassword, _exportAttribute);
         _contextMenu.getItems().forEach(x -> x.setStyle(Styling.SMALL_MENU_TEXT_BOLD));
         _buttonConnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.CONNECT_ICON));
         _buttonDisconnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.DISCONNECT_ICON));
