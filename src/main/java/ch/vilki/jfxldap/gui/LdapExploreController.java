@@ -6,6 +6,7 @@ import com.unboundid.ldap.sdk.*;
 import com.unboundid.ldap.sdk.schema.Schema;
 import com.unboundid.ldif.LDIFException;
 import com.unboundid.ldif.LDIFReader;
+import com.unboundid.util.ssl.SSLUtil;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -89,6 +90,8 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _clipBoardLDIF = new MenuItem(TAB + "Clipboard LDIF", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.COPY_PASTE_SMALL));
     MenuItem _deleteEntry = new MenuItem(TAB + "Delete", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REMOVE));
     MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
+    MenuItem _verifyPassword = new MenuItem(TAB + "Verify Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
+
 
     /*------------- PROGRESS PANE ----------------------- */
     @FXML
@@ -382,7 +385,8 @@ public class LdapExploreController implements IProgress, ILoader {
             _main._ctManager._startSearchController ._stage.showAndWait();
         });
         _setPassword.setOnAction(e -> setUserPassword());
-        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword);
+        _verifyPassword.setOnAction(e -> verifyPassword());
+        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword, _verifyPassword);
         _contextMenu.getItems().forEach(x -> x.setStyle(Styling.SMALL_MENU_TEXT_BOLD));
         _buttonConnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.CONNECT_ICON));
         _buttonDisconnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.DISCONNECT_ICON));
@@ -1151,13 +1155,13 @@ public class LdapExploreController implements IProgress, ILoader {
                 // Only process expanded children
                 if (entryTreeItem.isExpanded()) {
                     // Create a copy of children to avoid concurrent modification
-                    List<TreeItem<CustomEntryItem>> childrenCopy = new ArrayList<>(entryTreeItem.getChildren());
+                    List<TreeItem<CustomEntryItem>> childrenToCheck = new ArrayList<>(entryTreeItem.getChildren());
                     
                     // Check for new children that might have been added
                     refreshTree_checkAddedEntries(entryTreeItem);
                     
                     // Recursively process each expanded child
-                    for (TreeItem<CustomEntryItem> childItem : childrenCopy) {
+                    for (TreeItem<CustomEntryItem> childItem : childrenToCheck) {
                         if (childItem.isExpanded()) {
                             checkAndRefreshEntry(childItem);
                         }
@@ -1235,4 +1239,72 @@ public class LdapExploreController implements IProgress, ILoader {
             logger.error("Error setting password", e);
         }
     }
+
+    /**
+ * Verifies if a password is valid for the selected LDAP entry.
+ * This method tests the password by attempting to bind to the LDAP server
+ * using the entry's DN and the provided password.
+ */
+private void verifyPassword() {
+    if (_observedEntry == null || _observedEntry.getValue() == null || _observedEntry.getValue().getEntry() == null) {
+        GuiHelper.ERROR("Error", "No entry selected");
+        return;
+    }
+    
+    // Get the DN of the selected entry
+    String entryDN = _observedEntry.getValue().getDn();
+    
+    // Ask for the password to verify
+    String password = GuiHelper.enterPassword(
+        "Verify Password", 
+        "Enter password to verify for: " + entryDN
+    );
+    
+    // If password is null or empty, the user canceled the dialog
+    if (password == null || password.isEmpty()) {
+        return;
+    }
+    
+    try {
+        logger.info("Attempting to verify password for entry: {}", entryDN);
+        
+        // Create a new connection with the same settings as the current connection
+        LDAPConnection verifyConn = null;
+        try {
+            // Get the current connection's server and port
+            String host = _currConnection.getServer();
+            int port = _currConnection.getPortNumber();
+            boolean useSSL = _currConnection.isSSL();
+            
+            // Create a new connection with the entry's DN and provided password
+            if (useSSL) {
+                // Use the SSL connection
+                verifyConn = new LDAPConnection(host, port, entryDN, password);
+            } else {
+                verifyConn = new LDAPConnection(host, port, entryDN, password);
+            }
+            
+            // If we get here without an exception, the password is valid
+            GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
+            
+        } catch (LDAPException e) {
+            // Check the result code to provide a more specific error message
+            if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
+                GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
+            } else {
+                GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
+            }
+            logger.error("Error verifying password", e);
+        } finally {
+            // Always close the connection
+            if (verifyConn != null) {
+                verifyConn.close();
+            }
+        }
+    } catch (Exception e) {
+        GuiHelper.EXCEPTION("Error", "An unexpected error occurred while verifying the password", e);
+        logger.error("Unexpected error during password verification", e);
+    }
+}
+
 }
