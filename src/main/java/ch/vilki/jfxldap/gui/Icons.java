@@ -18,6 +18,7 @@ public class Icons {
         ARROW_LEFT,
         ENTRY_NOT_EQUAL,
         KEY,
+        PASSWORD,
         REMOVE,
         SEARCH,
         SEARCH_SMALL,
@@ -62,6 +63,7 @@ public class Icons {
             put(ICON_NAME.ENTRY_EQUAL, "Good_mark.png");
             put(ICON_NAME.EXPORT_SMALL, "export_small.png");
             put(ICON_NAME.KEY, "key.png");
+            put(ICON_NAME.PASSWORD, "icons8-passwort-16.png");
             put(ICON_NAME.ARROW_RIGHT, "Forward.png");
             put(ICON_NAME.ARROW_LEFT, "Back.png");
             put(ICON_NAME.ENTRY_NOT_EQUAL, "Alert.png");

@@ -88,7 +88,7 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _export = new MenuItem(TAB + "Export", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
     MenuItem _clipBoardLDIF = new MenuItem(TAB + "Clipboard LDIF", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.COPY_PASTE_SMALL));
     MenuItem _deleteEntry = new MenuItem(TAB + "Delete", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REMOVE));
-    MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.KEY));
+    MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
 
     /*------------- PROGRESS PANE ----------------------- */
     @FXML
