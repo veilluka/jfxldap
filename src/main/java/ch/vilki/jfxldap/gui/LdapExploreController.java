@@ -88,6 +88,7 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _export = new MenuItem(TAB + "Export", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
     MenuItem _clipBoardLDIF = new MenuItem(TAB + "Clipboard LDIF", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.COPY_PASTE_SMALL));
     MenuItem _deleteEntry = new MenuItem(TAB + "Delete", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REMOVE));
+    MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.KEY));
 
     /*------------- PROGRESS PANE ----------------------- */
     @FXML
@@ -380,7 +381,8 @@ public class LdapExploreController implements IProgress, ILoader {
             _main._ctManager._startSearchController .windowOpened();
             _main._ctManager._startSearchController ._stage.showAndWait();
         });
-        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry);
+        _setPassword.setOnAction(e -> setUserPassword());
+        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword);
         _contextMenu.getItems().forEach(x -> x.setStyle(Styling.SMALL_MENU_TEXT_BOLD));
         _buttonConnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.CONNECT_ICON));
         _buttonDisconnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.DISCONNECT_ICON));
@@ -1171,6 +1173,66 @@ public class LdapExploreController implements IProgress, ILoader {
             }
         } catch (Exception e) {
             logger.error("Error checking entry " + entryTreeItem.getValue().getDn() + ": " + e.getMessage(), e);
+        }
+    }
+
+    private void setUserPassword() {
+        if (_observedEntry == null || _observedEntry.getValue() == null || _observedEntry.getValue().getEntry() == null) {
+            GuiHelper.ERROR("Error", "No entry selected");
+            return;
+        }
+    
+        // Ask for the new password using the improved dialog with confirmation
+        String password = GuiHelper.enterPasswordWithConfirmation(
+            "Set Password", 
+            "Set new password for user", 
+            _observedEntry.getValue().getDn()
+        );
+        
+        // If password is null or empty, the user canceled the dialog
+        if (password == null || password.isEmpty()) {
+            return;
+        }
+    
+        try {
+            // Try different password formats depending on the LDAP server
+            Modification mod;
+            
+            // Check if this is Active Directory
+            boolean isActiveDirectory = false;
+            if (_currConnection.getVendor() != null && 
+                _currConnection.getVendor().toLowerCase().contains("microsoft")) {
+                isActiveDirectory = true;
+            } else if (_currConnection.get_rootDSE() != null && 
+                     _currConnection.get_rootDSE().hasAttribute("forestFunctionality")) {
+                isActiveDirectory = true;
+            }
+            
+            if (isActiveDirectory) {
+                // For Active Directory, use unicodePwd with special formatting
+                String quotedPassword = "\"" + password + "\"";
+                byte[] unicodePassword = quotedPassword.getBytes("UTF-16LE");
+                mod = new Modification(ModificationType.REPLACE, "unicodePwd", unicodePassword);
+                logger.info("Setting password using Active Directory format (unicodePwd attribute)");
+            } else {
+                // For standard LDAP servers like OpenLDAP
+                mod = new Modification(ModificationType.REPLACE, "userPassword", password);
+                logger.info("Setting password using standard LDAP format (userPassword attribute)");
+            }
+            
+            ModifyRequest modifyRequest = new ModifyRequest(_observedEntry.getValue().getDn(), mod);
+            
+            // Execute the modify operation
+            LDAPResult result = _currConnection.modify(modifyRequest);
+            
+            if (result.getResultCode().equals(ResultCode.SUCCESS)) {
+                GuiHelper.INFO("Success", "Password updated successfully");
+            } else {
+                GuiHelper.ERROR("Error", "Failed to update password: " + result.getDiagnosticMessage());
+            }
+        } catch (Exception e) {
+            GuiHelper.EXCEPTION("Error setting password", "An error occurred while setting the password", e);
+            logger.error("Error setting password", e);
         }
     }
 }

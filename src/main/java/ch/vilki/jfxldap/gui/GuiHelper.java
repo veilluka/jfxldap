@@ -228,6 +228,167 @@ public class GuiHelper {
         return  pass[0];
     }
 
+    /**
+     * Advanced password dialog with both password and confirmation fields in the same window,
+     * plus a visibility toggle checkbox.
+     * 
+     * @param title Dialog title
+     * @param header Dialog header text
+     * @param userDN Distinguished name for which to set the password (for display purposes)
+     * @return The entered password or null if canceled
+     */
+    public static String enterPasswordWithConfirmation(String title, String header, String userDN) {
+        // Create a dialog
+        Dialog<String> dialog = new Dialog<>();
+        dialog.setTitle(title);
+        dialog.setHeaderText(header);
+        dialog.setWidth(400);
+        
+        // Set up buttons
+        ButtonType confirmButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(confirmButtonType, ButtonType.CANCEL);
+        
+        // Set up icon
+        dialog.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.KEY));
+        
+        // Set up the grid
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 20, 10, 10));
+        
+        // Display user DN if provided
+        if (userDN != null && !userDN.isEmpty()) {
+            Label dnLabel = new Label("User DN:");
+            TextField dnField = new TextField(userDN);
+            dnField.setEditable(false);
+            dnField.setStyle("-fx-background-color: #f4f4f4;");
+            grid.add(dnLabel, 0, 0);
+            grid.add(dnField, 1, 0, 2, 1);
+            GridPane.setHgrow(dnField, Priority.ALWAYS);
+        }
+        
+        // Create password fields and text fields for visible passwords
+        PasswordField passwordField = new PasswordField();
+        PasswordField confirmPasswordField = new PasswordField();
+        TextField visiblePasswordField = new TextField();
+        TextField visibleConfirmPasswordField = new TextField();
+        
+        // Set prompt text
+        passwordField.setPromptText("Enter password");
+        confirmPasswordField.setPromptText("Confirm password");
+        visiblePasswordField.setPromptText("Enter password");
+        visibleConfirmPasswordField.setPromptText("Confirm password");
+        
+        // Initially hide the visible text fields
+        visiblePasswordField.setVisible(false);
+        visiblePasswordField.setManaged(false);
+        visibleConfirmPasswordField.setVisible(false);
+        visibleConfirmPasswordField.setManaged(false);
+        
+        // Create the checkbox for showing/hiding passwords
+        CheckBox showPasswordCheckBox = new CheckBox("Show password");
+        
+        // Add fields to the grid
+        grid.add(new Label("Password:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+        grid.add(visiblePasswordField, 1, 1);
+        
+        grid.add(new Label("Confirm Password:"), 0, 2);
+        grid.add(confirmPasswordField, 1, 2);
+        grid.add(visibleConfirmPasswordField, 1, 2);
+        
+        grid.add(showPasswordCheckBox, 1, 3);
+        
+        // Bind the password field values together
+        showPasswordCheckBox.selectedProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue) {
+                // Show as plain text
+                visiblePasswordField.setText(passwordField.getText());
+                visibleConfirmPasswordField.setText(confirmPasswordField.getText());
+                
+                passwordField.setVisible(false);
+                passwordField.setManaged(false);
+                visiblePasswordField.setVisible(true);
+                visiblePasswordField.setManaged(true);
+                
+                confirmPasswordField.setVisible(false);
+                confirmPasswordField.setManaged(false);
+                visibleConfirmPasswordField.setVisible(true);
+                visibleConfirmPasswordField.setManaged(true);
+            } else {
+                // Show as password
+                passwordField.setText(visiblePasswordField.getText());
+                confirmPasswordField.setText(visibleConfirmPasswordField.getText());
+                
+                passwordField.setVisible(true);
+                passwordField.setManaged(true);
+                visiblePasswordField.setVisible(false);
+                visiblePasswordField.setManaged(false);
+                
+                confirmPasswordField.setVisible(true);
+                confirmPasswordField.setManaged(true);
+                visibleConfirmPasswordField.setVisible(false);
+                visibleConfirmPasswordField.setManaged(false);
+            }
+        });
+        
+        // Sync the visible and masked password fields
+        visiblePasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            passwordField.setText(newValue);
+            validatePasswords(passwordField.getText(), confirmPasswordField.getText(), 
+                            dialog.getDialogPane().lookupButton(confirmButtonType));
+        });
+        
+        passwordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            visiblePasswordField.setText(newValue);
+            validatePasswords(newValue, confirmPasswordField.getText(), 
+                            dialog.getDialogPane().lookupButton(confirmButtonType));
+        });
+        
+        visibleConfirmPasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            confirmPasswordField.setText(newValue);
+            validatePasswords(passwordField.getText(), newValue, 
+                            dialog.getDialogPane().lookupButton(confirmButtonType));
+        });
+        
+        confirmPasswordField.textProperty().addListener((observable, oldValue, newValue) -> {
+            visibleConfirmPasswordField.setText(newValue);
+            validatePasswords(passwordField.getText(), newValue, 
+                            dialog.getDialogPane().lookupButton(confirmButtonType));
+        });
+        
+        // Initially disable the login button
+        Node confirmButton = dialog.getDialogPane().lookupButton(confirmButtonType);
+        confirmButton.setDisable(true);
+        
+        // Set the grid as the dialog content
+        dialog.getDialogPane().setContent(grid);
+        
+        // Set the focus to the password field
+        Platform.runLater(() -> passwordField.requestFocus());
+        
+        // Set up the result converter
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == confirmButtonType) {
+                return passwordField.isVisible() ? passwordField.getText() : visiblePasswordField.getText();
+            }
+            return null;
+        });
+        
+        // Show the dialog and return the result
+        Optional<String> result = dialog.showAndWait();
+        return result.orElse(null);
+    }
+    
+    /**
+     * Helper method to validate passwords match and enable/disable the confirm button
+     */
+    private static void validatePasswords(String password, String confirmPassword, Node confirmButton) {
+        boolean passwordsMatch = password != null && !password.isEmpty() && password.equals(confirmPassword);
+        confirmButton.setDisable(!passwordsMatch);
+    }
+
     public static File selectFile(Main main, FileChooser.ExtensionFilter extensionFilter , String title, FILE_OPTIONS file_options)
     {
         File selectedFile = null;
