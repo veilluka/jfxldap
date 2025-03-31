@@ -73,6 +73,7 @@ public class LdapExploreController implements IProgress, ILoader {
     @FXML Button _buttonCloseFile;
     @FXML Button _buttonRunLdapSearch;
     @FXML Button _buttonRemoveFilter;
+    @FXML Button _buttonReload; 
     @FXML HBox _hboxFilter;
     private TextFieldLdapFilter _textFieldLdapFilter = new TextFieldLdapFilter();
 
@@ -417,6 +418,10 @@ public class LdapExploreController implements IProgress, ILoader {
                 else  _main._ctManager._collectionsController.connect(_choiceBoxEnviroment.getSelectionModel().getSelectedItem());
             }
         });
+
+        _buttonReload.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REFRESH));
+_buttonReload.setOnAction(e -> refreshSelectedEntry());
+
         _expandedListenerOnline = (ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
             BooleanProperty bb = (BooleanProperty) observable;
 

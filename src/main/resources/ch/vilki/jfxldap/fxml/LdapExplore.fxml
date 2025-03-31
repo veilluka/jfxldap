@@ -7,7 +7,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox fx:id="_ldapExploreWindow" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.LdapExploreController">
+<VBox fx:id="_ldapExploreWindow" xmlns="http://javafx.com/javafx/20.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ch.vilki.jfxldap.gui.LdapExploreController">
 
    <children>
       <HBox VBox.vgrow="NEVER">
@@ -31,7 +31,11 @@
                   <Insets right="5.0" />
                </HBox.margin>
             </Button>
-            <Button fx:id="_buttonCloseFile" mnemonicParsing="false" />
+            <Button fx:id="_buttonCloseFile" mnemonicParsing="false">
+               <HBox.margin>
+                  <Insets right="5.0" />
+               </HBox.margin></Button>
+            <Button fx:id="_buttonReload" mnemonicParsing="false" />
          </children>
          <VBox.margin>
             <Insets bottom="3.0" right="3.0" top="3.0" />

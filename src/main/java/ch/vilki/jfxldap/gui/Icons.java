@@ -51,12 +51,14 @@ public class Icons {
         EXPORT_SMALL,
         SET_ATTRIBUTE_SMALL,
         COMPARE_SMALL,
-        SORT_SMALL
+        SORT_SMALL,
+        REFRESH 
     };
 
 
     private static final Map<ICON_NAME, String> ICONS_STRING_MAP = new HashMap<ICON_NAME, String>() {
         {
+            put(ICON_NAME.REFRESH, "icons8-refresh-16.png");
             put(ICON_NAME.COMPARE_SMALL, "compare_small.png");
             put(ICON_NAME.COPY_PASTE_SMALL, "copypaste_small.png");
             put(ICON_NAME.SET_ATTRIBUTE_SMALL, "set_attribute_small.png");
