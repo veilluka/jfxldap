@@ -20,6 +20,7 @@ import java.io.File
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
+import ch.vilki.jfxldap.gui.GuiHelper
 
 class ExportAttributeController {
     companion object {
@@ -38,11 +39,13 @@ class ExportAttributeController {
     @FXML private lateinit var btnCancel: Button
     @FXML private lateinit var progressBar: ProgressBar
     @FXML private lateinit var lblStatus: Label
+    @FXML private lateinit var comboSearchScope: ComboBox<String>
 
     private lateinit var ldapConnection: Connection
     private lateinit var baseDN: String
     private var exportPath: String = ""
     private lateinit var allAttributes: List<String>
+    private var lastFilter: String = ""  // Store the last used filter
 
     fun showExportAttributeWindow(connection: Connection, dn: String) {
         try {
@@ -66,6 +69,12 @@ class ExportAttributeController {
             // Load available attributes from the schema
             loadAttributes()
             
+            // Restore last filter if available
+            if (lastFilter.isNotEmpty()) {
+                txtFilter.text = lastFilter
+                filterAttributes(lastFilter)
+            }
+            
             // Show the stage
             stage.show()
         } catch (e: Exception) {
@@ -77,26 +86,39 @@ class ExportAttributeController {
     private fun initialize() {
         // Configure the browse button
         btnBrowse.setOnAction {
-            val directoryChooser = DirectoryChooser()
-            directoryChooser.title = "Select Export Directory"
-            if (exportPath.isNotEmpty()) {
-                val dir = File(exportPath)
-                if (dir.exists()) {
-                    directoryChooser.initialDirectory = dir
+            try {
+                // Use GuiHelper.selectFile with proper configuration
+                val file = GuiHelper.selectFile(
+                    Main._main,
+                    null,
+                    "Select Export Directory",
+                    GuiHelper.FILE_OPTIONS.OPEN_DIRECTORY
+                )
+                
+                if (file != null) {
+                    exportPath = file.absolutePath
+                    txtExportPath.text = exportPath
+                    // The directory is already saved to configuration by GuiHelper.selectFile
                 }
-            }
-            
-            val selectedDirectory = directoryChooser.showDialog(stage)
-            if (selectedDirectory != null) {
-                exportPath = selectedDirectory.absolutePath
-                txtExportPath.text = exportPath
+            } catch (e: Exception) {
+                logger.error("Error selecting directory", e)
+                GuiHelper.EXCEPTION("Error", "Failed to select directory", e)
             }
         }
         
         // Configure the filter text field
         txtFilter.textProperty().addListener { _, _, newValue ->
+            lastFilter = newValue  // Save the filter when it changes
             filterAttributes(newValue)
         }
+        
+        // Setup search scope combo box
+        comboSearchScope.items = FXCollections.observableArrayList(
+            "Base only", 
+            "Direct children only", 
+            "All descendants (recursive)"
+        )
+        comboSearchScope.selectionModel.select(2) // Default to recursive search
         
         // Configure the export button
         btnExport.setOnAction {
@@ -180,11 +202,18 @@ class ExportAttributeController {
         btnExport.isDisable = true
         lblStatus.text = "Starting export..."
         
+        // Determine search scope based on user selection
+        val searchScope = when (comboSearchScope.selectionModel.selectedIndex) {
+            0 -> SearchScope.BASE
+            1 -> SearchScope.ONE 
+            else -> SearchScope.SUB
+        }
+        
         // Run the export in a background thread
         Thread {
             try {
                 // Process the export starting from the base DN
-                processExport(baseDN, attribute, exportPath)
+                processExport(baseDN, attribute, exportPath, searchScope)
                 
                 javafx.application.Platform.runLater {
                     GuiHelper.INFO("Export Complete", "Attribute export completed successfully")
@@ -204,15 +233,12 @@ class ExportAttributeController {
         }.start()
     }
     
-    private fun processExport(baseDN: String, attribute: String, basePath: String) {
+    private fun processExport(baseDN: String, attribute: String, basePath: String, searchScope: SearchScope) {
         try {
-            // Count the number of RDN components in the base DN to determine relative paths later
-            val baseComponentCount = baseDN.split(",").size
-            
             // Find all entries under the base DN that have the requested attribute
             val searchRequest = ldapConnection.search(
                 baseDN, 
-                SearchScope.SUB, 
+                searchScope, 
                 com.unboundid.ldap.sdk.Filter.createPresenceFilter(attribute),
                 "dn", "cn", attribute
             )
@@ -224,30 +250,22 @@ class ExportAttributeController {
                 
                 if (attributeValue != null) {
                     try {
-                        // Determine the relative path and filename
-                        val pathInfo = determinePathAndFilename(entryDn, baseDN, baseComponentCount)
-                        val relativePath = pathInfo.first
-                        val fileName = pathInfo.second
+                        // Extract the file name and directory path
+                        val (directoryPath, fileName) = getPathAndFilename(entryDn, baseDN, basePath)
                         
-                        // Create full directory path
-                        val outputDir = if (relativePath.isEmpty()) {
-                            Paths.get(basePath)
-                        } else {
-                            val dirPath = Paths.get(basePath, *relativePath.split("/").toTypedArray())
-                            if (!Files.exists(dirPath)) {
-                                Files.createDirectories(dirPath)
-                            }
-                            dirPath
+                        // Create directories if they don't exist
+                        if (!Files.exists(directoryPath)) {
+                            Files.createDirectories(directoryPath)
                         }
                         
                         // Write the file
-                        val filePath = outputDir.resolve(fileName)
+                        val filePath = directoryPath.resolve(fileName)
                         Files.write(filePath, attributeValue.toByteArray())
                         
                         logger.info("Exported $attribute from $entryDn to $filePath")
                         
                         // Update status
-                        javafx.application.Platform.runLater {
+                        Platform.runLater {
                             lblStatus.text = "Exported: $fileName"
                         }
                     } catch (e: Exception) {
@@ -263,38 +281,66 @@ class ExportAttributeController {
     }
     
     /**
-     * Determines the relative path and filename for an entry based on its DN and the base DN.
-     * Returns a Pair where first is the relative path and second is the filename.
+     * Determines the directory path and filename for an entry based on its DN and the base DN.
+     * Returns a Pair where first is the Path to the directory and second is the filename.
      */
-    private fun determinePathAndFilename(entryDn: String, baseDN: String, baseComponentCount: Int): Pair<String, String> {
-        val dnComponents = entryDn.split(",")
-        // Get the entry's CN (the filename)
-        val entryCn = extractCnFromDn(dnComponents.first())
-        val fileName = if (entryCn.endsWith(".js")) entryCn else "$entryCn.txt"
+    private fun getPathAndFilename(entryDn: String, baseDN: String, basePath: String): Pair<java.nio.file.Path, String> {
+        // Split the DNs into components
+        val entryComponents = entryDn.split(",").map { it.trim() }
+        val baseComponents = baseDN.split(",").map { it.trim() }
         
-        // If this is a direct child of baseDN, no subdirectory needed
-        if (dnComponents.size <= baseComponentCount + 1) {
-            return Pair("", fileName)
+        // Find where the base DN starts in the entry DN
+        var baseStartIndex = -1
+        for (i in entryComponents.indices) {
+            if (i + baseComponents.size <= entryComponents.size) {
+                val potentialBase = entryComponents.subList(i, i + baseComponents.size)
+                if (potentialBase.size == baseComponents.size && 
+                    potentialBase.withIndex().all { (j, comp) -> 
+                        comp.equals(baseComponents[j], ignoreCase = true) 
+                    }) {
+                    baseStartIndex = i
+                    break
+                }
+            }
         }
         
-        // There are intermediate nodes, create subdirectory structure
-        // Extract components between the entry and the base DN (in reverse order)
-        val pathSize = dnComponents.size - baseComponentCount - 1
-        if (pathSize <= 0) {
-            return Pair("", fileName)
+        if (baseStartIndex == -1) {
+            // If we can't find the base DN in the entry DN, use a default approach
+            logger.warn("Could not find base DN in entry DN: $entryDn")
+            return Pair(Paths.get(basePath), "${getCnFromDn(entryComponents[0])}.txt")
         }
         
-        val intermediateComponents = dnComponents.subList(1, dnComponents.size - baseComponentCount)
-        // Get CNs from these components to form directory path
-        val directories = intermediateComponents.map { extractCnFromDn(it) }
-        val relativePath = directories.joinToString(separator = "/")
+        // Extract the path components (between entry and base DN)
+        val pathComponents = if (baseStartIndex > 1) {
+            entryComponents.subList(1, baseStartIndex).reversed()
+        } else {
+            listOf() // No intermediate components
+        }
         
-        return Pair(relativePath, fileName)
+        // Get the CN (filename)
+        val cn = getCnFromDn(entryComponents[0])
+        val fileName = if (cn.endsWith(".xml") || cn.endsWith(".js")) cn else "$cn.txt"
+        
+        // Build directory path
+        val dirPath = if (pathComponents.isEmpty()) {
+            Paths.get(basePath)
+        } else {
+            val dirs = pathComponents.map { getCnFromDn(it) }
+            Paths.get(basePath, *dirs.toTypedArray())
+        }
+        
+        return Pair(dirPath, fileName)
     }
     
-    private fun extractCnFromDn(dnComponent: String): String {
-        // Simple extraction of CN from DN component
-        val cnValue = dnComponent.substringAfter("=").trim()
-        return cnValue.ifEmpty { "unknown" }
+    /**
+     * Extracts the CN value from a DN component
+     */
+    private fun getCnFromDn(dnComponent: String): String {
+        // Extract CN value
+        val equalsIndex = dnComponent.indexOf('=')
+        if (equalsIndex > 0 && equalsIndex < dnComponent.length - 1) {
+            return dnComponent.substring(equalsIndex + 1).trim()
+        }
+        return dnComponent.trim()
     }
 }

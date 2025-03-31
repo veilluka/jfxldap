@@ -22,6 +22,7 @@
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
             <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+            <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
         </rowConstraints>
         
         <Label text="Filter:" GridPane.rowIndex="0" GridPane.columnIndex="0" />
@@ -30,9 +31,12 @@
         <Label text="Attribute:" GridPane.rowIndex="1" GridPane.columnIndex="0" />
         <ComboBox fx:id="comboAttributes" promptText="Select an attribute" GridPane.rowIndex="1" GridPane.columnIndex="1" GridPane.columnSpan="2" />
         
-        <Label text="Export Path:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
-        <TextField fx:id="txtExportPath" editable="false" promptText="Select export directory" GridPane.rowIndex="2" GridPane.columnIndex="1" />
-        <Button fx:id="btnBrowse" text="Browse..." GridPane.rowIndex="2" GridPane.columnIndex="2" />
+        <Label text="Search Scope:" GridPane.rowIndex="2" GridPane.columnIndex="0" />
+        <ComboBox fx:id="comboSearchScope" promptText="Select search scope" GridPane.rowIndex="2" GridPane.columnIndex="1" GridPane.columnSpan="2" />
+        
+        <Label text="Export Path:" GridPane.rowIndex="3" GridPane.columnIndex="0" />
+        <TextField fx:id="txtExportPath" editable="false" promptText="Select export directory" GridPane.rowIndex="3" GridPane.columnIndex="1" />
+        <Button fx:id="btnBrowse" text="Browse..." GridPane.rowIndex="3" GridPane.columnIndex="2" />
     </GridPane>
     
     <ProgressBar fx:id="progressBar" prefWidth="300.0" progress="0.0" />
