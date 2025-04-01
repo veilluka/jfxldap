@@ -123,9 +123,11 @@ jlink{
 
 tasks.register("createVersionFile") {
     doLast {
-       val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/Version.kt"
-       var content = "package ch.vilki.jfxldap; \n"
-       content+= """val sw_version="${properties.getProperty("version")}""""
+       val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/ApplicationVersion.kt"
+       var content = "package ch.vilki.jfxldap\n\n"
+       content+= """object ApplicationVersion {
+    const val VERSION = "${properties.getProperty("version")}"
+}"""
        File(versionFilePath).writeText(content)
     }
 }
