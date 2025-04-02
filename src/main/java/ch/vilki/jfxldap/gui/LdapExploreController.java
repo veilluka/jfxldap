@@ -15,6 +15,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.Event;
@@ -66,6 +67,7 @@ public class LdapExploreController implements IProgress, ILoader {
     TreeView<CollectionEntry> _collectionTree;
 
     @FXML ChoiceBox<Connection> _choiceBoxEnviroment;
+    private ChoiceBox<String> _choiceBoxTag;
     @FXML Button _buttonConnect;
     @FXML Button _buttonDisconnect;
     @FXML Button _buttonOpenFile;
@@ -167,6 +169,28 @@ public class LdapExploreController implements IProgress, ILoader {
         HBox.setHgrow(_textFieldLdapFilter, Priority.ALWAYS);
         _textFieldLdapFilter.alignmentProperty().setValue(Pos.BOTTOM_LEFT);
         HBox.setMargin(_textFieldLdapFilter, new Insets(5, 5, 1, 2));
+        
+        // Create tag ChoiceBox if it's null (not defined in FXML)
+        if (_choiceBoxTag == null) {
+            _choiceBoxTag = new ChoiceBox<>();
+            _choiceBoxTag.setTooltip(new Tooltip("Filter connections by tag"));
+        }
+        
+        // Find the HBox that contains the environment ChoiceBox
+        for (int i = 0; i < _exploreWindow.getChildren().size(); i++) {
+            if (_exploreWindow.getChildren().get(i) instanceof HBox) {
+                HBox controlsHBox = (HBox) _exploreWindow.getChildren().get(i);
+                // Look for the environment ChoiceBox in this HBox
+                for (int j = 0; j < controlsHBox.getChildren().size(); j++) {
+                    if (controlsHBox.getChildren().get(j) == _choiceBoxEnviroment) {
+                        // Insert the tag ChoiceBox just before the environment ChoiceBox
+                        controlsHBox.getChildren().add(j, _choiceBoxTag);
+                        HBox.setMargin(_choiceBoxTag, new Insets(0, 5, 0, 0));
+                        break;
+                    }
+                }
+            }
+        }
 
         // Add key event handler for F5 refresh
         _treeView.setOnKeyPressed(event -> {
@@ -1027,11 +1051,14 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
                 if (!childrenDN.contains(c.getDN())) {
                     CustomEntryItem CustomEntryItem = new CustomEntryItem(c);
                     TreeItem<CustomEntryItem> item = new TreeItem<>(CustomEntryItem);
-                    Entry child = _currentReader.getOneChild(CustomEntryItem.getEntry().getDN());
-                    if (child != null && _currentReader.get_children().size() < 5000) {
-                        item.expandedProperty().addListener(_expandedListenerOnline);
+                    Entry child = null;
+                    try {
+                        child = _currentReader.getOneChild(CustomEntryItem.getEntry().getDN());
+                    } catch (Exception e) { }
+                    if (child != null) {
                         CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
                         CustomEntryItemDummy.setDummy();
+                        item.expandedProperty().addListener(_expandedListenerOnline);
                         item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
                     }
                     entryTreeItem.getChildren().add(item);
@@ -1044,12 +1071,18 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
     public void setMain(Main main) {
         _main = main;
         _choiceBoxEnviroment.setItems(_main._ctManager._settingsController._connectionObservableList);
+        
+        // Create tag ChoiceBox programmatically
+        _choiceBoxTag = new ChoiceBox<>();
+        _choiceBoxTag.setTooltip(new Tooltip("Filter connections by tag"));
+        
+        // Initialize tag filtering
+        initializeTagChoiceBox();
+        
         _this = this;
         initProgressWindow(_main);
         _treeView = new TreeView<>();
         _treeView.getStyleClass().add("code-font-tree");
-
-
         VBox.setVgrow(_treeView, Priority.ALWAYS);
         _treeView.setMaxHeight(Double.MAX_VALUE);
 
@@ -1096,6 +1129,102 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
                         }
                     }
                 });
+    }
+
+    private void initializeTagChoiceBox() {
+        // Set tooltip for the tag choice box
+        _choiceBoxTag.setTooltip(new Tooltip("Filter connections by tag"));
+        
+        // Create ObservableList for tags that will be used in the ChoiceBox
+        ObservableList<String> tags = FXCollections.observableArrayList();
+        tags.add("All"); // Default option to show all connections
+        
+        // Collect unique tags from all connections
+        Set<String> uniqueTags = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        for (Connection conn : _main._ctManager._settingsController._connectionObservableList) {
+            String tag = conn.getTag();
+            if (tag != null && !tag.trim().isEmpty()) {
+                uniqueTags.add(tag.trim());
+            }
+        }
+        
+        // Add all unique tags to the ObservableList
+        tags.addAll(uniqueTags);
+        
+        // Set items and select the "All" option by default
+        _choiceBoxTag.setItems(tags);
+        _choiceBoxTag.getSelectionModel().select(0); // Select "All" option
+        
+        // Create filtered list for connections
+        FilteredList<Connection> filteredConnections = new FilteredList<>(
+            _main._ctManager._settingsController._connectionObservableList, 
+            p -> true // Initially show all connections
+        );
+        
+        // Set up listener for tag selection changes
+        _choiceBoxTag.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                String selectedTag = newValue;
+                logger.info("Selected tag: " + selectedTag);
+                
+                // Apply filter based on selected tag
+                if (selectedTag.equals("All")) {
+                    // Show all connections
+                    filteredConnections.setPredicate(p -> true);
+                    _choiceBoxEnviroment.setItems(_main._ctManager._settingsController._connectionObservableList);
+                } else {
+                    // Filter connections by selected tag
+                    filteredConnections.setPredicate(conn -> {
+                        String connTag = conn.getTag();
+                        return connTag != null && connTag.trim().equalsIgnoreCase(selectedTag);
+                    });
+                    _choiceBoxEnviroment.setItems(filteredConnections);
+                }
+                
+                // Select first connection if available
+                if (!_choiceBoxEnviroment.getItems().isEmpty()) {
+                    _choiceBoxEnviroment.getSelectionModel().select(0);
+                }
+            }
+        });
+        
+        // Add listener to connection list to update tags when connections change
+        _main._ctManager._settingsController._connectionObservableList.addListener(
+            (ListChangeListener<Connection>) change -> {
+                // Recompute unique tags
+                uniqueTags.clear();
+                for (Connection conn : _main._ctManager._settingsController._connectionObservableList) {
+                    String tag = conn.getTag();
+                    if (tag != null && !tag.trim().isEmpty()) {
+                        uniqueTags.add(tag.trim());
+                    }
+                }
+                
+                // Update tag list while preserving selection
+                String selectedTag = _choiceBoxTag.getSelectionModel().getSelectedItem();
+                tags.clear();
+                tags.add("All");
+                tags.addAll(uniqueTags);
+                
+                // Restore selection or default to "All"
+                if (tags.contains(selectedTag)) {
+                    _choiceBoxTag.getSelectionModel().select(selectedTag);
+                } else {
+                    _choiceBoxTag.getSelectionModel().select(0);
+                }
+                
+                // Reapply filter
+                if (selectedTag.equals("All")) {
+                    filteredConnections.setPredicate(p -> true);
+                    _choiceBoxEnviroment.setItems(_main._ctManager._settingsController._connectionObservableList);
+                } else {
+                    filteredConnections.setPredicate(conn -> {
+                        String connTag = conn.getTag();
+                        return connTag != null && connTag.trim().equalsIgnoreCase(selectedTag);
+                    });
+                    _choiceBoxEnviroment.setItems(filteredConnections);
+                }
+            });
     }
 
     /**
