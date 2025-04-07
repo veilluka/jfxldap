@@ -520,7 +520,28 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
 
     public void deleteEntry() {
         if (_observedEntry == null) return;
-        if (_currentReader.getOneChild(_observedEntry.getValue().getDn()) == null) {
+        
+        boolean hasChildren = false;
+        
+        // First check if numSubOrdinates attribute is available
+        Entry entry = _observedEntry.getValue().getEntry();
+        if (entry != null) {
+            Attribute numSubOrdinatesAttr = entry.getAttribute("numSubOrdinates");
+            if (numSubOrdinatesAttr != null) {
+                try {
+                    int numSubOrdinates = Integer.parseInt(numSubOrdinatesAttr.getValue());
+                    hasChildren = numSubOrdinates > 0;
+                } catch (NumberFormatException e) {
+                    // Fall back to search if parsing fails
+                    hasChildren = _currentReader.getOneChild(_observedEntry.getValue().getDn()) != null;
+                }
+            } else {
+                // Fall back to old method when numSubOrdinates is not available
+                hasChildren = _currentReader.getOneChild(_observedEntry.getValue().getDn()) != null;
+            }
+        }
+        
+        if (!hasChildren) {
             logger.debug("Deleting only one child {}", _observedEntry.getValue().getDn());
             try {
                 logger.info("DELETING NOW-> {}" + _observedEntry.getValue().getDn());
@@ -881,14 +902,37 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
                     for (CustomEntryItem custom : sorted_items) {
                         TreeItem<CustomEntryItem> item = new TreeItem<>(custom);
                         _treeView.getRoot().getChildren().add(item);
-                        Entry child = null;
-                        try {
-                            child = _currentReader.getOneChild(custom.getEntry().getDN());
-                        } catch (Exception e1) {
-                            GuiHelper.EXCEPTION("Connection Error", e1.getLocalizedMessage(), e1);
+                        
+                        // Check for numSubOrdinates attribute first before doing an expensive search
+                        Entry entry = custom.getEntry();
+                        boolean hasChildren = false;
+                        
+                        if (entry != null) {
+                            // Check if entry has numSubOrdinates attribute
+                            Attribute numSubOrdinatesAttr = entry.getAttribute("numSubOrdinates");
+                            if (numSubOrdinatesAttr != null) {
+                                // Use the attribute value directly
+                                try {
+                                    int numSubOrdinates = Integer.parseInt(numSubOrdinatesAttr.getValue());
+                                    hasChildren = numSubOrdinates > 0;
+                                } catch (NumberFormatException e1) {
+                                    // If parsing fails, assume there might be children
+                                    hasChildren = true;
+                                }
+                            } else {
+                                // Fall back to old method when numSubOrdinates is not available
+                                try {
+                                    Entry child = _currentReader.getOneChild(custom.getEntry().getDN());
+                                    hasChildren = (child != null);
+                                } catch (Exception e1) {
+                                    GuiHelper.EXCEPTION("Connection Error", e1.getLocalizedMessage(), e1);
+                                }
+                            }
                         }
-                        if (child != null) {
-                            CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
+                        
+                        if (hasChildren) {
+                            // Add a dummy child to enable expansion
+                            CustomEntryItem CustomEntryItemDummy = new CustomEntryItem();
                             CustomEntryItemDummy.setDummy();
                             item.expandedProperty().addListener(_expandedListenerOnline);
                             item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
