@@ -4,11 +4,13 @@ import ch.vilki.jfxldap.backend.Config;
 import ch.vilki.jfxldap.gui.CollectionsController;
 import ch.vilki.jfxldap.gui.CustomLdapFxToolbar;
 import ch.vilki.jfxldap.gui.GuiHelper;
+import ch.vilki.jfxldap.gui.LdifEditorController;
 import ch.vilki.secured.SecStorage;
 import ch.vilki.secured.SecureString;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -17,6 +19,7 @@ import javafx.scene.control.SplitPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import jfxtras.styles.jmetro.JMetro;
+import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -27,11 +30,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static ch.vilki.jfxldap.Main._ctManager;
 
-
+/**
+ * Controller for the main application window
+ */
 public class Controller implements Initializable {
 
     private static final Logger logger = LogManager.getLogger(Controller.class);
-
 
     @FXML private SplitPane _mainPane;
     @FXML private MenuItem _keyStore;
@@ -42,6 +46,8 @@ public class Controller implements Initializable {
     @FXML private MenuItem _changeMasterPassword;
     @FXML private MenuItem _settings;
     @FXML private MenuItem _exit;
+    @FXML private MenuItem _ldifEditor;
+    @FXML private MenuItem _editMenuItem;
     @FXML private BorderPane _mainWindow;
 
     private int counter = 0;
@@ -49,9 +55,9 @@ public class Controller implements Initializable {
     HBox _collectionProjectNode = null;
     CustomLdapFxToolbar _toolBar = null;
 
-    //private ArrayList<SplitPane> _mainSplitPanes = new ArrayList();
+    private Stage _primaryStage;
 
-
+    //private ArrayList<SplitPane> _mainSplitPanes = new ArrayList;
 
     @Override
     public void initialize(URL location, ResourceBundle resources) {
@@ -70,6 +76,7 @@ public class Controller implements Initializable {
         _toolBar.buttonLdapExplorerTargetWindow.setOnAction(x->  showComponentWindow(0, _ctManager._ldapTargetExploreController.get_window(),"TARGET",true));
         _toolBar.buttonSearchResultWindow.setOnAction(x-> showComponentWindow(1,Main._ctManager._searchResultController.get_window(),"SEARCH RESULT",false));
         _mainPane.autosize();
+        initMenu();
     }
 
     public Boolean findElement(Node searchPane){
@@ -190,10 +197,19 @@ public class Controller implements Initializable {
         return tabPane.get();
     }
 
+    public void setPrimaryStage(Stage stage){
+        this._primaryStage = stage;
+    }
+
+    /**
+     * Initialize the menu items
+     * This method is called from Main.java
+     */
     public void initMenu(){
         _saveProject.setDisable(true);
         _closeProject.setDisable(true);
         _settings.setOnAction(event -> _ctManager._settingsController.showWindow());
+        _ldifEditor.setOnAction(event -> openLdifEditor());
         _keyStore.setOnAction(x->{
             if(Main._configuration.get_keyStore() == null)
             {
@@ -307,6 +323,47 @@ public class Controller implements Initializable {
             _saveProject.setDisable(true);
             _closeProject.setDisable(true);
         });
+        _editMenuItem.setOnAction(e -> openAttributeEditor());
     }
 
+    /**
+     * Opens the LDIF editor dialog
+     */
+    private void openLdifEditor() {
+        try {
+            // Load the LDIF editor FXML
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(Main.class.getResource("/fxml/LdifEditor.fxml"));
+            javafx.scene.Parent page = loader.load();
+            
+            // Get the controller and initialize it
+            LdifEditorController controller = loader.getController();
+            controller.setMain(Main._main);
+            controller.setWindow(page);
+            
+            // Use the primary stage we have stored
+            if (_primaryStage != null) {
+                controller.setOwner(_primaryStage);
+            } else if (_mainWindow.getScene() != null && _mainWindow.getScene().getWindow() instanceof javafx.stage.Stage) {
+                controller.setOwner((javafx.stage.Stage) _mainWindow.getScene().getWindow());
+            }
+            
+            // Show the dialog
+            controller.show();
+        } catch (java.io.IOException e) {
+            GuiHelper.EXCEPTION("Error Opening LDIF Editor", "Failed to open LDIF editor", e);
+        }
+    }
+
+    /**
+     * Opens the attribute editor
+     */
+    private void openAttributeEditor() {
+        try {
+            // This will be expanded in the future to provide more editing capabilities
+            GuiHelper.INFO("Attribute Editor", "The attribute editor is not yet implemented.\n\nPlease use the LDIF Editor for now.");
+        } catch (Exception e) {
+            GuiHelper.EXCEPTION("Error", "Error opening attribute editor", e);
+        }
+    }
 }

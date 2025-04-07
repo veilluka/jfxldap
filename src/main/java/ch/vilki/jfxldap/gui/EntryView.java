@@ -27,7 +27,9 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
+/**
+ * Created by vilki on 20.03.2017.
+ */
 public class EntryView extends TreeTableView<EntryView.EntryValue> {
 
     static String FOUND_VALUE_STYLE = "-fx-font-weight:bold; -fx-text-fill: red; ";
@@ -260,6 +262,94 @@ public class EntryView extends TreeTableView<EntryView.EntryValue> {
         //_attributesContextMenu.setStyle("-fx-font: 10px \"Segoe UI\";  -fx-font-weight:bold;");
         _attributesContextMenu.getItems().forEach(x -> x.setStyle("-fx-font: 10px \"Segoe UI\";  -fx-font-weight:bold;"));
 
+        // Implement Add Value functionality
+        _addValue.setOnAction(x -> {
+            TreeItem<EntryValue> selected = getSelectionModel().getSelectedItem();
+            if (_currentConnection == null) return;
+            if (_currentEntry == null) return;
+
+            // Get the attribute name (removing size info if present)
+            String attName = selected.getValue().removeAttributeSize();
+
+            // Check if it's an operational attribute
+            if (_currentConnection.getOperationalAttributes().contains(attName)) {
+                GuiHelper.ERROR("Cannot add value", "Operational attribute, cannot modify");
+                return;
+            }
+
+            // Create a new row with empty value for the selected attribute
+            EntryValue newValue = new EntryValue(attName, "");
+            TreeItem<EntryValue> newItem = new TreeItem<>(newValue);
+
+            // Add it to the attribute parent or the attribute itself if it's a leaf
+            if (selected.getParent().equals(getRoot())) {
+                // If selected an attribute header, add to that attribute
+                selected.getChildren().add(newItem);
+                selected.setExpanded(true);
+            } else {
+                // If selected a value, add to its parent (the attribute)
+                selected.getParent().getChildren().add(newItem);
+                selected.getParent().setExpanded(true);
+            }
+
+            // Select and edit the new value
+            getSelectionModel().select(newItem);
+
+            // Schedule edit to start after UI updates
+            javafx.application.Platform.runLater(() -> {
+                edit(getRow(newItem), valueColumn);
+            });
+
+            // Add an edit handler for this specific cell
+            valueColumn.setOnEditCommit(event -> {
+                String newValueText = event.getNewValue();
+                if (newValueText == null || newValueText.trim().isEmpty()) {
+                    // If user entered empty value, just remove the temporary row
+                    if (event.getRowValue() == newItem) {
+                        if (selected.getParent().equals(getRoot())) {
+                            selected.getChildren().remove(newItem);
+                        } else {
+                            selected.getParent().getChildren().remove(newItem);
+                        }
+                    }
+                    return;
+                }
+
+                // Create LDAP modification to add the new value
+                Modification modification = new Modification(ModificationType.ADD, attName, newValueText);
+                List<Modification> modifications = new ArrayList<>();
+                modifications.add(modification);
+
+                // Create modify request
+                List<ModifyRequest> modifyRequests = new ArrayList<>();
+                ModifyRequest modifyRequest = new ModifyRequest(_currentEntry.getDn(), modifications);
+                modifyRequests.add(modifyRequest);
+
+                // Confirm with user
+                if (!GuiHelper.confirm("Confirm value addition", "Add value to attribute?", modifyRequest.toLDIFString())) {
+                    // User cancelled, remove the temporary row
+                    if (event.getRowValue() == newItem) {
+                        if (selected.getParent().equals(getRoot())) {
+                            selected.getChildren().remove(newItem);
+                        } else {
+                            selected.getParent().getChildren().remove(newItem);
+                        }
+                    }
+                    return;
+                }
+
+                try {
+                    // Execute LDAP modification
+                    _currentConnection.modify(modifyRequests);
+
+                    // Refresh entry data and view
+                    _currentEntry.readAllAttributes(_currentConnection);
+                    updateValue(_currentEntry, _currentConnection);
+                } catch (Exception e) {
+                    GuiHelper.EXCEPTION("Add value failed", e.getMessage(), e);
+                }
+            });
+        });
     }
 
     private TextFlow buildTextFlow(String text, String filter) {
@@ -331,6 +421,11 @@ public class EntryView extends TreeTableView<EntryView.EntryValue> {
         cleanUpTree();
         if (customEntry == null) return;
         if (customEntry.getEntry() == null) return;
+
+        // Enable the add actions when an entry is loaded
+        _addValue.setDisable(false);
+        _addAttribute.setDisable(false);
+
         List<String> attributes = new ArrayList<>();
         List<String> oppAts = customEntry.getEntry().getAttributes().stream()
                 .map(x -> x.getName())

@@ -25,7 +25,8 @@
           </Menu>
           <Menu mnemonicParsing="false" text="Edit">
             <items>
-              <MenuItem mnemonicParsing="false" text="Edit" />
+              <MenuItem fx:id="_editMenuItem" mnemonicParsing="false" text="Edit" />
+              <MenuItem fx:id="_ldifEditor" mnemonicParsing="false" text="LDIF Editor" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Help">

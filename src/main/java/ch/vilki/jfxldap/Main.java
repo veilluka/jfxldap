@@ -52,6 +52,7 @@ public class Main extends Application {
         ObservableMap<String, Object> ns = loader.getNamespace();
         Controller controller = (Controller )ns.get("controller");
         controller.initMenu();
+        controller.setPrimaryStage(primaryStage);
 
         primaryStage.setTitle("jfxLDAP by Bauer Vedran [" + AppVersion.version + "]");
         //JMetro jMetro = new JMetro(root, Style.LIGHT);
