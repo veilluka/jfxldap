@@ -321,3 +321,83 @@ tasks.register<Copy>("install_local") {
         }
     }
 }
+
+// Task to create a Windows installer with bundled JRE
+tasks.register<Exec>("createStandaloneExe") {
+    dependsOn("fatJar")
+    
+    workingDir = projectDir
+    
+    val jpackagePath = "${System.getProperty("java.home")}/bin/jpackage"
+    val appVersion = project.version.toString()
+    val appName = "jfxLDAP"
+    val mainJar = "${layout.buildDirectory.get()}/libs/jfxLDAP-${project.version}-all.jar" 
+    val outputDir = "${layout.buildDirectory.get()}/standalone-exe"
+    
+    commandLine = listOf(
+        jpackagePath,
+        "--type", "app-image",  // Creates an application directory with bundled JRE
+        "--name", appName,
+        "--app-version", appVersion,
+        "--input", "${layout.buildDirectory.get()}/libs",
+        "--dest", outputDir,
+        "--main-jar", "jfxLDAP-${project.version}-all.jar",
+        "--main-class", "ch.vilki.jfxldap.Main",
+        "--icon", "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png",
+        "--java-options", "-Djava.library.path=\"\$APPDIR/app\"",
+        "--win-console",         // Keep console for command-line support
+        "--win-shortcut",
+        "--verbose"
+    )
+    
+    doFirst {
+        mkdir(outputDir)
+        println("Creating standalone executable in $outputDir")
+    }
+    
+    doLast {
+        println("Standalone executable created at: $outputDir/$appName")
+        println("This executable does NOT require Java to be installed")
+    }
+}
+
+// Task to create a Windows installer with bundled JRE
+tasks.register<Exec>("createStandaloneInstaller") {
+    dependsOn("fatJar")
+    
+    workingDir = projectDir
+    
+    val jpackagePath = "${System.getProperty("java.home")}/bin/jpackage"
+    val appVersion = project.version.toString()
+    val appName = "jfxLDAP"
+    val mainJar = "${layout.buildDirectory.get()}/libs/jfxLDAP-${project.version}-all.jar" 
+    val outputDir = "${layout.buildDirectory.get()}/standalone-installer"
+    
+    commandLine = listOf(
+        jpackagePath,
+        "--type", "exe",         // Creates a Windows installer
+        "--name", appName,
+        "--app-version", appVersion,
+        "--input", "${layout.buildDirectory.get()}/libs",
+        "--dest", outputDir,
+        "--main-jar", "jfxLDAP-${project.version}-all.jar",
+        "--main-class", "ch.vilki.jfxldap.Main",
+        "--icon", "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png",
+        "--java-options", "-Djava.library.path=\"\$APPDIR/app\"",
+        "--win-console",         // Keep console for command-line support
+        "--win-shortcut",
+        "--win-menu",
+        "--win-dir-chooser",
+        "--verbose"
+    )
+    
+    doFirst {
+        mkdir(outputDir)
+        println("Creating standalone installer in $outputDir")
+    }
+    
+    doLast {
+        println("Standalone installer created at: $outputDir/$appName-$appVersion.exe")
+        println("This installer creates an application that does NOT require Java to be installed")
+    }
+}
