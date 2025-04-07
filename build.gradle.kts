@@ -256,6 +256,44 @@ launch4j {
     windowTitle = "LDAP Explorer"
 }
 
+// Task to create a fat JAR (executable JAR with all dependencies)
+tasks.register<Jar>("fatJar") {
+    manifest {
+        attributes(
+            "Main-Class" to "ch.vilki.jfxldap.Main",
+            "Implementation-Title" to "LDAP Explorer",
+            "Implementation-Version" to project.version
+        )
+    }
+    
+    archiveBaseName.set("jfxLDAP")
+    archiveClassifier.set("all")
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    
+    // Include main source set output (compiled classes)
+    from(sourceSets.main.get().output)
+    
+    // Include all resources from the main source set
+    from(sourceSets.main.get().resources)
+    
+    // Include all runtime dependencies
+    dependsOn(configurations.runtimeClasspath)
+    from({
+        configurations.runtimeClasspath.get()
+            .filter { it.name.endsWith("jar") }
+            .map { zipTree(it) }
+    })
+    
+    // Exclude META-INF files that could cause conflicts
+    exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/MANIFEST.MF")
+    
+    doLast {
+        println("Fat JAR created: ${archiveFile.get().asFile.absolutePath}")
+        println("You can run it with: java -jar ${archiveFile.get().asFile.name}")
+    }
+}
+
 tasks.register("createVersionFile") {
     doLast {
        val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/ApplicationVersion.kt"
