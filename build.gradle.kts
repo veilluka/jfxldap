@@ -15,6 +15,7 @@ plugins {
     id("org.beryx.jlink") version "2.22.1"
     //id ("org.javamodularity.moduleplugin") version "1.8.15"
     id("org.jetbrains.kotlin.jvm") version "2.1.20"
+    id("edu.sc.seis.launch4j") version "2.5.4"
    
 
 }
@@ -120,6 +121,139 @@ jlink{
             imageOptions.add("--win-console")
         }
     }
+}
+
+// Custom task to create a Windows executable
+tasks.register<Exec>("createWindowsExe") {
+    dependsOn("installDist")
+    
+    workingDir = projectDir
+    
+    val jpackagePath = "${System.getProperty("java.home")}/bin/jpackage"
+    val appVersion = project.version.toString()
+    val appName = "LDAP Explorer"
+    val inputDir = "${layout.buildDirectory.get()}/install/jfxldap"
+    val outputDir = "${layout.buildDirectory.get()}/windows-exe"
+    val mainJar = "lib/jfxldap.jar"
+    val mainClass = "ch.vilki.jfxldap.Main"
+    val iconPath = "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png"
+    
+    commandLine = listOf(
+        jpackagePath,
+        "--type", "app-image",
+        "--name", appName,
+        "--app-version", appVersion,
+        "--input", inputDir,
+        "--dest", outputDir,
+        "--main-jar", mainJar,
+        "--main-class", mainClass,
+        "--icon", iconPath,
+        "--win-console"
+    )
+    
+    doFirst {
+        mkdir(outputDir)
+        println("Creating Windows executable in $outputDir")
+    }
+}
+
+// Task to create a Windows installer
+tasks.register<Exec>("createWindowsInstaller") {
+    dependsOn("installDist")
+    
+    workingDir = projectDir
+    
+    val jpackagePath = "${System.getProperty("java.home")}/bin/jpackage"
+    val appVersion = project.version.toString()
+    val appName = "LDAP Explorer"
+    val inputDir = "${layout.buildDirectory.get()}/install/jfxldap"
+    val outputDir = "${layout.buildDirectory.get()}/windows-installer"
+    val mainJar = "lib/jfxldap.jar"
+    val mainClass = "ch.vilki.jfxldap.Main"
+    val iconPath = "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png"
+    
+    commandLine = listOf(
+        jpackagePath,
+        "--type", "exe",
+        "--name", appName,
+        "--app-version", appVersion,
+        "--input", inputDir,
+        "--dest", outputDir,
+        "--main-jar", mainJar,
+        "--main-class", mainClass,
+        "--icon", iconPath,
+        "--win-console",
+        "--win-shortcut",
+        "--win-menu",
+        "--win-dir-chooser"
+    )
+    
+    doFirst {
+        mkdir(outputDir)
+        println("Creating Windows installer in $outputDir")
+    }
+}
+
+// Task to create a self-contained Windows executable
+tasks.register<Copy>("createWindowsExecutable") {
+    dependsOn("installDist")
+    
+    val outputDir = "${layout.buildDirectory.get()}/windows-app"
+    val installDir = "${layout.buildDirectory.get()}/install/jfxldap"
+    
+    from(installDir)
+    into(outputDir)
+    
+    doFirst {
+        mkdir(outputDir)
+        println("Creating Windows executable in $outputDir")
+    }
+    
+    doLast {
+        // Create a Windows batch file launcher that will work as an executable
+        val launcherContent = """
+            @echo off
+            setlocal
+            set "APP_HOME=%~dp0"
+            set "JAVA_OPTS=-Djava.library.path="%APP_HOME%\\lib""
+            "%APP_HOME%\\bin\\jfxldap.bat" %*
+        """.trimIndent()
+        
+        val launcherFile = File("$outputDir/LdapExplorer.bat")
+        launcherFile.writeText(launcherContent)
+        
+        println("Created Windows launcher: ${launcherFile.absolutePath}")
+        println("You can now distribute the folder: $outputDir")
+        println("Users can run the application by double-clicking on LdapExplorer.bat")
+    }
+}
+
+// Task to create a zip distribution of the Windows application
+tasks.register<Zip>("zipWindowsApplication") {
+    dependsOn("createWindowsExecutable")
+    
+    from("${layout.buildDirectory.get()}/windows-app")
+    archiveFileName.set("LdapExplorer-${project.version}-windows.zip")
+    destinationDirectory.set(file("${layout.buildDirectory.get()}/distributions"))
+    
+    doLast {
+        println("Created Windows application zip: ${archiveFile.get().asFile.absolutePath}")
+    }
+}
+
+// Launch4j configuration for creating Windows executable
+launch4j {
+    mainClassName = "ch.vilki.jfxldap.Main"
+    outputDir = "${layout.buildDirectory.get()}/launch4j"
+    icon = "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png"  // Using existing PNG icon
+    jreMinVersion = "21"
+    jar = "${layout.buildDirectory.get()}/install/jfxldap/lib/jfxldap.jar"
+    dontWrapJar = true
+    headerType = "console"
+    jvmOptions = setOf("-Djava.library.path=./lib")
+    bundledJre64Bit = true
+    bundledJrePath = "%JAVA_HOME%"
+    windowTitle = "LDAP Explorer"
 }
 
 tasks.register("createVersionFile") {
