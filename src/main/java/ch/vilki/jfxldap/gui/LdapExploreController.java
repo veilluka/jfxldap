@@ -988,21 +988,26 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
     }
 
     public void disconnect() {
+        _buttonConnect.setDisable(false);
+        _buttonDisconnect.setDisable(true);
+        _buttonUploadFile.setDisable(true);
+        _breakFileLoad = true;
+
         _choiceBoxEnviroment.getSelectionModel().clearSelection();
         if (_ldifReader != null) {
             try {
                 _ldifReader.close();
                 _ldifReader = null;
             } catch (Exception e) {
+                // Ignore exceptions during closing
             }
         }
         if (_openedLDIFFile != null) _openedLDIFFile = null;
 
-        removeListerners(_treeView.getRoot());
-        removeListerners(_collectionTree.getRoot());
+        removeListeners(_treeView.getRoot());
+        removeListeners(_collectionTree.getRoot());
         _treeView.setRoot(null);
         _collectionTree.setRoot(null);
-
 
         _observedEntry = null;
         if (get_currentConnection() != null) get_currentConnection().disconect();
@@ -1010,12 +1015,12 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
         if(_main.get_entryDiffView()!=null) _main.get_entryDiffView().updateValues(null);
     }
 
-    private void removeListerners(TreeItem<?> item) {
+    private void removeListeners(TreeItem<?> item) {
         if(item==null || item.getChildren() == null) return;
         for(TreeItem childItem : item.getChildren()){
             childItem.expandedProperty().removeListener(_expandedListenerOnline);
             childItem.expandedProperty().unbind();
-            removeListerners(childItem);
+            removeListeners(childItem);
         }
     }
 
