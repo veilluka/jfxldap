@@ -30,7 +30,7 @@ import static ch.vilki.jfxldap.Main._ctManager;
 
 public class Controller implements Initializable {
 
-    Logger logger = LogManager.getLogger(Controller.class);
+    private static final Logger logger = LogManager.getLogger(Controller.class);
 
 
     @FXML private SplitPane _mainPane;
@@ -234,7 +234,7 @@ public class Controller implements Initializable {
                 Main._configuration.openConfiguration(Config.getConfigurationFile(),new SecureString(second));
                 if(kPass!=null) Main._configuration.set_keyStorePassword(kPass);
             } catch (Exception e) {
-                LogManager.getLogger().error("Exception occured", e);
+                LogManager.getLogger(Controller.class).error("Exception occured", e);
                 GuiHelper.EXCEPTION("Error changing master password", e.getMessage(), e);
             }
             GuiHelper.INFO("Master Operation Change","Master Password changed!");
@@ -297,7 +297,7 @@ public class Controller implements Initializable {
             try {
                 _ctManager._collectionsController.saveProject();
             } catch (Exception e1) {
-                LogManager.getLogger().error("Exception during project save",e);
+                LogManager.getLogger(Controller.class).error("Exception during project save",e);
                 GuiHelper.EXCEPTION("Error saving project",e1.getMessage(),e1);
             }
         });
@@ -310,4 +310,3 @@ public class Controller implements Initializable {
     }
 
 }
-

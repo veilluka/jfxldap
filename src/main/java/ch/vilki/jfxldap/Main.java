@@ -154,7 +154,7 @@ public class Main extends Application {
             try {
                 cLine.runCmd(testArguments);
             } catch (Exception e) {
-                LogManager.getLogger().error("Exception in main",e);
+                LogManager.getLogger(Main.class).error("Exception in main",e);
                 System.err.println(e.getMessage());
 
             }
@@ -162,12 +162,12 @@ public class Main extends Application {
         }
         if(args!= null && args.length > 0)
         {
-            LogManager.getLogger().info("Input arguments found, running console only");
+            LogManager.getLogger(Main.class).info("Input arguments found, running console only");
             CmdLine cLine = new CmdLine();
             try {
                 cLine.runCmd(args);
             } catch (Exception e) {
-                LogManager.getLogger().error("Exception in main",e);
+                LogManager.getLogger(Main.class).error("Exception in main",e);
                 System.err.println(e.getMessage());
             }
             System.exit(0);
