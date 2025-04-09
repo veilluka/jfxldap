@@ -274,39 +274,6 @@ tasks.register<Copy>("copyPowerShellScript") {
     }
 }
 
-// Make fatJar depend on copyBatchFile and copyPowerShellScript to ensure they're copied
-tasks.named("fatJar") {
-    finalizedBy("copyBatchFile", "copyPowerShellScript")
-}
-
-tasks.register("createVersionFile") {
-    doLast {
-       val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/ApplicationVersion.kt"
-       var content = "package ch.vilki.jfxldap\n\n"
-       content+= """object ApplicationVersion {
-    const val VERSION = "${properties.getProperty("version")}"
-}"""
-       File(versionFilePath).writeText(content)
-    }
-}
-
-tasks.register<Copy>("install_local") {
-    dependsOn("installDist")
-
-    val targetInstallationDir = properties.get("local_installation") as String
-    from("${layout.buildDirectory.get()}/install/jfxldap")
-    into(targetInstallationDir)
-    doFirst {
-        println("Install in $targetInstallationDir")
-        val targetDir = File(targetInstallationDir)
-        if (targetDir.exists()) {
-            File("${targetDir.absolutePath}/lib").deleteRecursively()
-           File("${targetDir.absolutePath}/bin").deleteRecursively()
-
-        }
-    }
-}
-
 // Task to create a fat JAR (executable JAR with all dependencies)
 tasks.register<Jar>("fatJar") {
     manifest {
@@ -339,9 +306,40 @@ tasks.register<Jar>("fatJar") {
     // Exclude META-INF files that could cause conflicts
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA", "META-INF/MANIFEST.MF")
     
+    // Copy scripts after JAR creation
+    finalizedBy("copyBatchFile", "copyPowerShellScript")
+    
     doLast {
         println("Fat JAR created: ${archiveFile.get().asFile.absolutePath}")
         println("You can run it with: java -jar ${archiveFile.get().asFile.name}")
+    }
+}
+
+tasks.register("createVersionFile") {
+    doLast {
+       val versionFilePath = "$projectDir/src/main/java/ch/vilki/jfxldap/ApplicationVersion.kt"
+       var content = "package ch.vilki.jfxldap\n\n"
+       content+= """object ApplicationVersion {
+    const val VERSION = "${properties.getProperty("version")}"
+}"""
+       File(versionFilePath).writeText(content)
+    }
+}
+
+tasks.register<Copy>("install_local") {
+    dependsOn("installDist")
+
+    val targetInstallationDir = properties.get("local_installation") as String
+    from("${layout.buildDirectory.get()}/install/jfxldap")
+    into(targetInstallationDir)
+    doFirst {
+        println("Install in $targetInstallationDir")
+        val targetDir = File(targetInstallationDir)
+        if (targetDir.exists()) {
+            File("${targetDir.absolutePath}/lib").deleteRecursively()
+           File("${targetDir.absolutePath}/bin").deleteRecursively()
+
+        }
     }
 }
 
