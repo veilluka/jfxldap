@@ -9,7 +9,6 @@ import javafx.scene.layout.VBox
 
 class ControllerManager(main: Main) {
 
-
     var _main:Main = main
     lateinit var _ldapSourceExploreCtrl: LdapExploreController
     lateinit var _ldapTargetExploreController: LdapExploreController
@@ -24,6 +23,7 @@ class ControllerManager(main: Main) {
     lateinit var _exportWindowController: ExportWindowController
     lateinit var _showEntryController: ShowEntryController
     lateinit var _exportAttributeController: ExportAttributeController
+    lateinit var _ldifEditorController: LdifEditorController
 
     lateinit var _modificationsViewController: ModificationsViewController
     lateinit var _deleteEntriesController: DeleteEntriesController
@@ -73,10 +73,8 @@ class ControllerManager(main: Main) {
         _deleteEntriesController = initController("DeleteEntriesWindow.fxml") as DeleteEntriesController
         _keyStoreController = initController("KeyStoreWindow.fxml") as KeyStoreController
         _exportAttributeController = ExportAttributeController()
+        _ldifEditorController = initController("LdifEditor.fxml") as LdifEditorController
 
         _settingsController.readConfiguration()
-
     }
-
-
 }

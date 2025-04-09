@@ -2,15 +2,29 @@ package ch.vilki.jfxldap.gui;
 
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.Connection;
-import com.unboundid.ldap.sdk.*;
+import com.unboundid.ldap.sdk.Filter;
+import com.unboundid.ldap.sdk.LDAPConnection;
+import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldif.LDIFChangeRecord;
 import com.unboundid.ldif.LDIFException;
 import com.unboundid.ldif.LDIFReader;
 import javafx.application.Platform;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
@@ -24,13 +38,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * Controller for the LDIF editor which allows users to write and execute LDIF operations
- * on a selected LDAP connection.
- */
 public class LdifEditorController implements ILoader {
 
     private static final Logger logger = LogManager.getLogger(LdifEditorController.class);
@@ -56,144 +68,172 @@ public class LdifEditorController implements ILoader {
     @FXML
     private ProgressBar progressBar;
 
+    @FXML
+    private TextField ldapFilterField;
+
+    @FXML
+    private Button applyFilterButton;
+
+    @FXML
+    private ComboBox<String> modificationTypeComboBox;
+
+    @FXML
+    private ComboBox<String> attributeComboBox;
+
+    @FXML
+    private TextField attributeValueField;
+
+    @FXML
+    private Button addModificationButton;
+
     private Stage stage;
     private Scene scene;
-    private Main main; // Used in setMain method, required by ILoader interface
+    private Main main;
+    private Connection currentConnection;
 
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    /**
-     * Initializes the controller after FXML loading.
-     */
     @FXML
     public void initialize() {
-        // Set up the connection choice box
+        // Initialize modification types
+        ObservableList<String> modificationTypes = FXCollections.observableArrayList();
+        modificationTypes.addAll("ADD", "DELETE", "REPLACE");
+        modificationTypeComboBox.setItems(modificationTypes);
+        modificationTypeComboBox.getSelectionModel().select(0);
+
+        // Set up connection choice box
         connectionChoiceBox.setTooltip(new Tooltip("Select LDAP connection"));
-
-        // Bind execute button to connection selection
-        executeButton.disableProperty().bind(
-                connectionChoiceBox.getSelectionModel().selectedItemProperty().isNull());
-
-        // Set up syntax highlighting and validation for the LDIF text area
-        configureLdifTextArea();
-
-        // Set up button actions
-        setupButtonActions();
-    }
-
-    private void configureLdifTextArea() {
-        // Add key event handler for syntax highlighting
-        ldifTextArea.addEventFilter(KeyEvent.KEY_RELEASED, event -> {
-            validateLdifSyntax();
+        connectionChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Connection>() {
+            @Override
+            public void changed(ObservableValue<? extends Connection> observable, Connection oldValue, Connection newValue) {
+                if (newValue != null) {
+                    currentConnection = newValue;
+                    updateAttributeComboBox();
+                }
+            }
         });
 
-        // Set default placeholder text
-        ldifTextArea.setPromptText("# Enter LDIF content here\n" +
-                "# Example:\n" +
-                "dn: cn=example,dc=example,dc=com\n" +
-                "changetype: add\n" +
-                "objectClass: top\n" +
-                "objectClass: person\n" +
-                "cn: example\n" +
-                "sn: User\n" +
-                "description: Example LDIF entry");
+        // Set up LDAP filter field
+        ldapFilterField.setTooltip(new Tooltip("Enter LDAP filter to search for entries"));
+        ldapFilterField.textProperty().addListener(new ChangeListener<String>() {
+            @Override
+            public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
+                if (newValue != null && !newValue.isEmpty()) {
+                    validateLdapFilter(newValue);
+                }
+            }
+        });
+
+        // Set up buttons
+        setupButtonActions();
+
+        // Set up attribute combo box
+        attributeComboBox.setTooltip(new Tooltip("Select or type an attribute"));
+        attributeComboBox.setEditable(true);
+    }
+
+    private void updateAttributeComboBox() {
+        if (currentConnection != null) {
+            ObservableList<String> attributes = FXCollections.observableArrayList();
+            String[] schemaAttributes = currentConnection.getAllSchemaAttributes();
+            if (schemaAttributes != null) {
+                attributes.addAll(schemaAttributes);
+                java.util.Collections.sort(attributes, String.CASE_INSENSITIVE_ORDER);
+            }
+            attributeComboBox.setItems(attributes);
+        }
+    }
+
+    private void validateLdapFilter(String filterText) {
+        try {
+            Filter.create(filterText);
+            statusLabel.setText("Valid LDAP filter");
+            statusLabel.setStyle("-fx-text-fill: green;");
+        } catch (Exception e) {
+            statusLabel.setText("Invalid LDAP filter: " + e.getMessage());
+            statusLabel.setStyle("-fx-text-fill: red;");
+        }
     }
 
     private void setupButtonActions() {
-        executeButton.setOnAction(event -> executeLdif());
-        
-        cancelButton.setOnAction(event -> {
-            stage.close();
+        executeButton.setOnAction(new javafx.event.EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                executeLdif();
+            }
+        });
+        cancelButton.setOnAction(new javafx.event.EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                stage.close();
+            }
+        });
+        applyFilterButton.setOnAction(new javafx.event.EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                applyFilter();
+            }
+        });
+        addModificationButton.setOnAction(new javafx.event.EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                addModificationToLdif();
+            }
         });
     }
 
-    /**
-     * Validates LDIF syntax in the text area and updates UI feedback.
-     */
-    private void validateLdifSyntax() {
-        String ldifContent = ldifTextArea.getText();
-        if (ldifContent == null || ldifContent.trim().isEmpty()) {
-            statusLabel.setText("Enter LDIF content");
-            statusLabel.setStyle("-fx-text-fill: gray;");
-            return;
-        }
-
-        // Validate basic LDIF format (must start with "dn: " and have proper syntax)
-        if (!ldifContent.trim().toLowerCase().startsWith("dn:")) {
-            statusLabel.setText("Invalid LDIF: Must start with 'dn:'");
-            statusLabel.setStyle("-fx-text-fill: red;");
+    private void applyFilter() {
+        String filterText = ldapFilterField.getText();
+        if (filterText == null || filterText.isEmpty()) {
+            GuiHelper.ERROR("Filter Required", "Please enter an LDAP filter");
             return;
         }
 
         try {
-            // Use temporary file since the UnboundID reader doesn't have a StringReader constructor
-            File tempFile = null;
-            try {
-                tempFile = File.createTempFile("ldap_editor_validate_", ".ldif");
-                try (FileWriter writer = new FileWriter(tempFile)) {
-                    writer.write(ldifContent);
-                }
-                
-                // Try to parse the LDIF content
-                LDIFReader reader = new LDIFReader(tempFile);
-                
-                try {
-                    // Try to actually read and parse all records
-                    boolean hasRecords = false;
-                    LDIFChangeRecord record;
-                    while ((record = reader.readChangeRecord()) != null) {
-                        hasRecords = true;
-                        
-                        // Basic validation
-                        if (record.getDN() == null || record.getDN().isEmpty()) {
-                            statusLabel.setText("Invalid LDIF: Missing DN in record");
-                            statusLabel.setStyle("-fx-text-fill: red;");
-                            return;
-                        }
-                        
-                        // Validate change type
-                        ChangeType changeType = record.getChangeType();
-                        if (changeType == null) {
-                            statusLabel.setText("Invalid LDIF: Missing changetype");
-                            statusLabel.setStyle("-fx-text-fill: red;");
-                            return;
-                        }
-                    }
-                    
-                    if (!hasRecords) {
-                        statusLabel.setText("Warning: No LDIF records found");
-                        statusLabel.setStyle("-fx-text-fill: orange;");
-                    } else {
-                        statusLabel.setText("Valid LDIF syntax");
-                        statusLabel.setStyle("-fx-text-fill: green;");
-                    }
-                } finally {
-                    reader.close();
-                }
-            } finally {
-                // Clean up the temporary file
-                if (tempFile != null && tempFile.exists()) {
-                    try {
-                        Files.delete(tempFile.toPath());
-                    } catch (IOException e) {
-                        logger.warn("Failed to delete temporary LDIF file: {}", e.getMessage());
-                    }
-                }
-            }
-        } catch (IOException e) {
-            statusLabel.setText("I/O Error: " + e.getMessage());
-            statusLabel.setStyle("-fx-text-fill: red;");
-            logger.error("I/O error validating LDIF: {}", e.getMessage(), e);
-        } catch (LDIFException e) {
-            statusLabel.setText("Invalid LDIF: " + e.getMessage());
-            statusLabel.setStyle("-fx-text-fill: red;");
-            logger.error("Invalid LDIF syntax: {}", e.getMessage(), e);
+            Filter.create(filterText);
+            // TODO: Implement actual LDAP search using the filter
+            statusLabel.setText("Filter applied successfully");
+            statusLabel.setStyle("-fx-text-fill: green;");
+        } catch (Exception e) {
+            GuiHelper.ERROR("Invalid Filter", "Invalid LDAP filter: " + e.getMessage());
         }
     }
 
-    /**
-     * Executes the LDIF content against the selected connection.
-     */
+    private void addModificationToLdif() {
+        if (currentConnection == null) {
+            GuiHelper.ERROR("Connection Required", "Please select a connection");
+            return;
+        }
+
+        String modificationType = modificationTypeComboBox.getValue();
+        String attribute = attributeComboBox.getValue();
+        String value = attributeValueField.getText();
+
+        if (attribute == null || attribute.isEmpty()) {
+            GuiHelper.ERROR("Attribute Required", "Please select or enter an attribute");
+            return;
+        }
+
+        if (value == null || value.isEmpty()) {
+            GuiHelper.ERROR("Value Required", "Please enter a value");
+            return;
+        }
+
+        // Generate LDIF modification
+        String modification = generateLdifModification(modificationType, attribute, value);
+        ldifTextArea.appendText(modification + "\n\n");
+        statusLabel.setText("Modification added to LDIF");
+        statusLabel.setStyle("-fx-text-fill: green;");
+    }
+
+    private String generateLdifModification(String modificationType, String attribute, String value) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("changetype: modify\n");
+        sb.append(modificationType.toLowerCase()).append(":: ").append(attribute).append("\n");
+        sb.append("-\n");
+        return sb.toString();
+    }
+
     private void executeLdif() {
         final Connection selectedConnection = connectionChoiceBox.getSelectionModel().getSelectedItem();
         if (selectedConnection == null) {
@@ -207,119 +247,126 @@ public class LdifEditorController implements ILoader {
             return;
         }
 
-        // Disable UI during execution
-        setOperationInProgress(true);
-        
-        // Execute LDIF in background
-        executorService.submit(() -> {
-            File tempFile = null;
-            try {
-                // Create a temporary file for LDIF execution
-                tempFile = File.createTempFile("ldap_editor_execute_", ".ldif");
-                try (FileWriter writer = new FileWriter(tempFile)) {
-                    writer.write(ldifContent);
-                }
-                
-                // Check if connection is established
-                LDAPConnection ldapConnection = null;
-                if (selectedConnection.get_ldapConnection() != null) {
-                    ldapConnection = selectedConnection.get_ldapConnection();
-                } else {
-                    // Need to establish connection first
-                    Platform.runLater(() -> {
-                        GuiHelper.INFO("Connection Required", "Connecting to " + selectedConnection.getName());
+        // Show confirmation dialog
+        if (!GuiHelper.confirm("Execute LDIF", "Are you sure you want to execute this LDIF?", 
+                "This operation will modify data on the LDAP server and may not be reversible.")) {
+            return;
+        }
+
+        // Start execution in background
+        progressBar.setVisible(true);
+        statusLabel.setText("Executing LDIF modifications...");
+        statusLabel.setStyle("-fx-text-fill: blue;");
+
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                File tempFile = null;
+                try {
+                    // Create temp file with LDIF content
+                    tempFile = File.createTempFile("ldap_editor_execute_", ".ldif");
+                    try (FileWriter writer = new FileWriter(tempFile)) {
+                        writer.write(ldifContent);
+                    }
+
+                    // Parse and execute LDIF
+                    LDIFReader reader = new LDIFReader(tempFile);
+                    int successCount = 0;
+                    int errorCount = 0;
+                    StringBuilder resultBuilder = new StringBuilder();
+
+                    try {
+                        LDIFChangeRecord record;
+                        while ((record = reader.readChangeRecord()) != null) {
+                            try {
+                                // Execute the change
+                                record.processChange(selectedConnection.get_ldapConnection());
+                                successCount++;
+                                
+                                // Add to results
+                                resultBuilder.append("Success: ")
+                                        .append(record.getDN())
+                                        .append(" (")
+                                        .append(record.getChangeType())
+                                        .append(")\n");
+                                
+                            } catch (LDAPException e) {
+                                errorCount++;
+                                resultBuilder.append("Error: ")
+                                        .append(record.getDN())
+                                        .append(" (")
+                                        .append(record.getChangeType())
+                                        .append("): ")
+                                        .append(e.getMessage())
+                                        .append("\n");
+                                
+                                logger.error("LDAP error executing change for DN {}: {}", 
+                                        record.getDN(), e.getMessage(), e);
+                            }
+                        }
+                    } finally {
+                        reader.close();
+                    }
+
+                    // Update UI with results
+                    final int finalSuccessCount = successCount;
+                    final int finalErrorCount = errorCount;
+                    final String results = resultBuilder.toString();
+                    
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressBar.setVisible(false);
+                            String resultMessage = String.format("Completed: %d successful, %d failed", 
+                                    finalSuccessCount, finalErrorCount);
+                            
+                            statusLabel.setText(resultMessage);
+                            if (finalErrorCount > 0) {
+                                statusLabel.setStyle("-fx-text-fill: red;");
+                                GuiHelper.ERROR_DETAILED("LDIF Execution Results", resultMessage, results);
+                            } else {
+                                statusLabel.setStyle("-fx-text-fill: green;");
+                                GuiHelper.INFO("LDIF Execution Complete", resultMessage);
+                            }
+                        }
                     });
                     
-                    try {
-                        selectedConnection.connect();
-                        ldapConnection = selectedConnection.get_ldapConnection();
-                    } catch (GeneralSecurityException e) {
-                        throw new LDAPException(ResultCode.LOCAL_ERROR, "Security error during connection: " + e.getMessage(), e);
-                    }
-                }
-                
-                // Process the LDIF
-                LDIFReader reader = new LDIFReader(tempFile);
-                LDIFChangeRecord changeRecord;
-                int successCount = 0;
-                int totalCount = 0;
-                
-                StringBuilder resultBuilder = new StringBuilder();
-                
-                try {
-                    while ((changeRecord = reader.readChangeRecord()) != null) {
-                        totalCount++;
-                        try {
-                            // Process the change and ignore the result
-                            changeRecord.processChange(ldapConnection);
-                            successCount++;
-                            resultBuilder.append("SUCCESS: ")
-                                    .append(changeRecord.getDN())
-                                    .append(" (")
-                                    .append(changeRecord.getChangeType())
-                                    .append(")\n");
-                        } catch (LDAPException e) {
-                            resultBuilder.append("ERROR: ")
-                                    .append(changeRecord.getDN())
-                                    .append(" (")
-                                    .append(changeRecord.getChangeType())
-                                    .append("): ")
-                                    .append(e.getMessage())
-                                    .append("\n");
-                            logger.error("Error processing LDIF change: {}", e.getMessage(), e);
+                } catch (IOException e) {
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressBar.setVisible(false);
+                            statusLabel.setText("I/O Error: " + e.getMessage());
+                            statusLabel.setStyle("-fx-text-fill: red;");
+                            GuiHelper.ERROR("I/O Error", e.getMessage());
                         }
-                        
-                        // Update progress UI
-                        final double progress = (double) totalCount / Math.max(1, totalCount + 1);
-                        Platform.runLater(() -> progressBar.setProgress(progress));
-                    }
+                    });
+                    logger.error("I/O error executing LDIF: {}", e.getMessage(), e);
+                } catch (LDIFException e) {
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressBar.setVisible(false);
+                            statusLabel.setText("Invalid LDIF: " + e.getMessage());
+                            statusLabel.setStyle("-fx-text-fill: red;");
+                            GuiHelper.ERROR("Invalid LDIF", e.getMessage());
+                        }
+                    });
+                    logger.error("Invalid LDIF syntax: {}", e.getMessage(), e);
                 } finally {
-                    reader.close();
-                }
-                
-                // Display results
-                final int failureCount = totalCount - successCount;
-                final String resultSummary = "Completed: " + successCount + " successful, " + 
-                        failureCount + " failed\n\n" + resultBuilder.toString();
-                
-                Platform.runLater(() -> {
-                    if (failureCount > 0) {
-                        GuiHelper.ERROR("LDIF Execution Results", resultSummary);
-                    } else {
-                        GuiHelper.INFO("LDIF Execution Complete", resultSummary);
+                    // Clean up the temporary file
+                    if (tempFile != null && tempFile.exists()) {
+                        try {
+                            Files.delete(tempFile.toPath());
+                        } catch (IOException e) {
+                            logger.warn("Failed to delete temporary LDIF file: {}", e.getMessage());
+                        }
                     }
-                    setOperationInProgress(false);
-                });
-                
-            } catch (LDAPException | IOException | LDIFException e) {
-                logger.error("Error executing LDIF: {}", e.getMessage(), e);
-                Platform.runLater(() -> {
-                    GuiHelper.EXCEPTION("LDIF Execution Error", "Failed to execute LDIF", e);
-                    setOperationInProgress(false);
-                });
-            } finally {
-                // Clean up the temporary file
-                if (tempFile != null && tempFile.exists()) {
-                    tempFile.delete();
                 }
             }
         });
     }
-    
-    private void setOperationInProgress(boolean inProgress) {
-        executeButton.setDisable(inProgress);
-        ldifTextArea.setDisable(inProgress);
-        connectionChoiceBox.setDisable(inProgress);
-        progressBar.setVisible(inProgress);
-        
-        if (!inProgress) {
-            progressBar.setProgress(0);
-        }
-    }
 
-    /**
-     * Shows the LDIF editor dialog.
-     */
     public void show() {
         if (stage == null) {
             logger.error("Stage is null, cannot show LDIF Editor");

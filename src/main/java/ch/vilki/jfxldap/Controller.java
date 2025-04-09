@@ -333,7 +333,7 @@ public class Controller implements Initializable {
         try {
             // Load the LDIF editor FXML
             FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(Main.class.getResource("/fxml/LdifEditor.fxml"));
+            loader.setLocation(Main.class.getResource("/ch/vilki/jfxldap/fxml/LdifEditor.fxml"));
             javafx.scene.Parent page = loader.load();
             
             // Get the controller and initialize it
