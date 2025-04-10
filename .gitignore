@@ -12,6 +12,7 @@ build/
 *.iws
 .idea/
 out/
+bin/
 
 
 

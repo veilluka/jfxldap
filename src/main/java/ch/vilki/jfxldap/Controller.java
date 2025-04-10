@@ -209,7 +209,13 @@ public class Controller implements Initializable {
         _saveProject.setDisable(true);
         _closeProject.setDisable(true);
         _settings.setOnAction(event -> _ctManager._settingsController.showWindow());
-        _ldifEditor.setOnAction(event -> openLdifEditor());
+        _ldifEditor.setOnAction(event -> {
+            if (_ctManager._ldapSourceExploreCtrl.get_currentConnection() == null) {
+                GuiHelper.ERROR("Keine Verbindung", "Es ist keine LDAP-Verbindung aktiv. Bitte verbinden Sie sich zuerst mit einem LDAP-Server.");
+                return;
+            }
+            openLdifEditor();
+        });
         _keyStore.setOnAction(x->{
             if(Main._configuration.get_keyStore() == null)
             {
