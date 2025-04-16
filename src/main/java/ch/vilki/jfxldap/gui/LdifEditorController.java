@@ -127,6 +127,9 @@ public class LdifEditorController implements ILoader {
         attributeComboBox.setTooltip(new Tooltip("Select or type an attribute"));
         attributeComboBox.setEditable(true);
         
+        // Add auto-completion support for attribute ComboBox
+        setupAttributeAutoCompletion();
+        
         // Rename the "Add to LDIF" button to "Create LDIF"
         addModificationButton.setText("Create LDIF");
         addModificationButton.setTooltip(new Tooltip("Create LDIF modifications for entries matching the filter"));
@@ -444,6 +447,87 @@ public class LdifEditorController implements ILoader {
                             logger.warn("Failed to delete temporary LDIF file: {}", e.getMessage());
                         }
                     }
+                }
+            }
+        });
+    }
+
+    /**
+     * Sets up auto-completion for the attribute ComboBox
+     */
+    private void setupAttributeAutoCompletion() {
+        // Get the editor from the ComboBox
+        TextField editor = attributeComboBox.getEditor();
+        
+        // Add listener to the text property of the editor
+        editor.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue == null || newValue.isEmpty()) {
+                attributeComboBox.hide();
+                return;
+            }
+            
+            // Get all attributes from the ComboBox items
+            ObservableList<String> allItems = attributeComboBox.getItems();
+            if (allItems == null || allItems.isEmpty()) {
+                return;
+            }
+            
+            // Filter the items based on the entered text (case-insensitive)
+            String lowerCaseNewValue = newValue.toLowerCase();
+            ObservableList<String> filteredItems = FXCollections.observableArrayList();
+            
+            // First add exact matches and then prefix matches
+            for (String item : allItems) {
+                if (item.toLowerCase().equals(lowerCaseNewValue)) {
+                    filteredItems.add(item);
+                }
+            }
+            
+            for (String item : allItems) {
+                if (item.toLowerCase().startsWith(lowerCaseNewValue) && 
+                    !filteredItems.contains(item)) {
+                    filteredItems.add(item);
+                }
+            }
+            
+            // Add contains matches (but not at beginning)
+            for (String item : allItems) {
+                if (item.toLowerCase().contains(lowerCaseNewValue) && 
+                    !item.toLowerCase().startsWith(lowerCaseNewValue) &&
+                    !filteredItems.contains(item)) {
+                    filteredItems.add(item);
+                }
+            }
+            
+            // Update the items and show the dropdown
+            if (!filteredItems.isEmpty()) {
+                attributeComboBox.setItems(filteredItems);
+                
+                // Only show the dropdown if we're not in the middle of selection
+                if (!attributeComboBox.isShowing()) {
+                    attributeComboBox.show();
+                }
+            } else {
+                attributeComboBox.hide();
+            }
+        });
+        
+        // Add key pressed event handler to handle Enter key
+        editor.setOnKeyPressed(event -> {
+            if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
+                ObservableList<String> items = attributeComboBox.getItems();
+                if (items != null && !items.isEmpty()) {
+                    // Select the first item if there are suggestions
+                    String firstMatch = items.get(0);
+                    editor.setText(firstMatch);
+                    attributeComboBox.setValue(firstMatch);
+                    attributeComboBox.hide();
+                    
+                    // Move focus to the next field (attributeValueField)
+                    attributeValueField.requestFocus();
+                    
+                    // Consume the event to prevent it from propagating
+                    event.consume();
                 }
             }
         });
