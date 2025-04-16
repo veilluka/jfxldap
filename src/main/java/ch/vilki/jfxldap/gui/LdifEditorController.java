@@ -106,10 +106,7 @@ public class LdifEditorController implements ILoader {
         connectionChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Connection>() {
             @Override
             public void changed(ObservableValue<? extends Connection> observable, Connection oldValue, Connection newValue) {
-                if (newValue != null) {
-                    currentConnection = newValue;
-                    updateAttributeComboBox();
-                }
+
             }
         });
 
