@@ -126,6 +126,10 @@ public class LdifEditorController implements ILoader {
         // Set up attribute combo box
         attributeComboBox.setTooltip(new Tooltip("Select or type an attribute"));
         attributeComboBox.setEditable(true);
+        
+        // Rename the "Add to LDIF" button to "Create LDIF"
+        addModificationButton.setText("Create LDIF");
+        addModificationButton.setTooltip(new Tooltip("Create LDIF modifications for entries matching the filter"));
     }
 
     private void updateAttributeComboBox() {
@@ -201,6 +205,12 @@ public class LdifEditorController implements ILoader {
             return;
         }
 
+        String filterText = ldapFilterField.getText();
+        if (filterText == null || filterText.isEmpty()) {
+            GuiHelper.ERROR("Filter Required", "Please enter an LDAP filter to find entries");
+            return;
+        }
+
         String modificationType = modificationTypeComboBox.getValue();
         String attribute = attributeComboBox.getValue();
         String value = attributeValueField.getText();
@@ -210,24 +220,100 @@ public class LdifEditorController implements ILoader {
             return;
         }
 
-        if (value == null || value.isEmpty()) {
-            GuiHelper.ERROR("Value Required", "Please enter a value");
+        if (value == null || value.isEmpty() && !modificationType.equals("DELETE")) {
+            GuiHelper.ERROR("Value Required", "Please enter a value (except for DELETE operations)");
             return;
         }
 
-        // Generate LDIF modification
-        String modification = generateLdifModification(modificationType, attribute, value);
-        ldifTextArea.appendText(modification + "\n\n");
-        statusLabel.setText("Modification added to LDIF");
-        statusLabel.setStyle("-fx-text-fill: green;");
-    }
+        // Clear existing LDIF content
+        ldifTextArea.clear();
+        
+        // Show progress
+        progressBar.setVisible(true);
+        statusLabel.setText("Searching for entries and creating LDIF modifications...");
+        statusLabel.setStyle("-fx-text-fill: blue;");
 
-    private String generateLdifModification(String modificationType, String attribute, String value) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("changetype: modify\n");
-        sb.append(modificationType.toLowerCase()).append(":: ").append(attribute).append("\n");
-        sb.append("-\n");
-        return sb.toString();
+        // Execute search and create LDIF in background
+        executorService.submit(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    // Create the search filter
+                    Filter filter = Filter.create(filterText);
+                    
+                    // Perform the search
+                    final StringBuilder ldifContent = new StringBuilder();
+                    int entryCount = 0;
+                    
+                    // Use the unboundid API to search for entries
+                    com.unboundid.ldap.sdk.SearchRequest searchRequest = 
+                        new com.unboundid.ldap.sdk.SearchRequest(
+                            "", // Base DN (empty will use the connection's base DN)
+                            com.unboundid.ldap.sdk.SearchScope.SUB,
+                            filter,
+                            "dn"); // Only need the DN
+                    
+                    com.unboundid.ldap.sdk.SearchResult searchResult = 
+                        currentConnection.get_ldapConnection().search(searchRequest);
+                    
+                    for (com.unboundid.ldap.sdk.SearchResultEntry entry : searchResult.getSearchEntries()) {
+                        String dn = entry.getDN();
+                        
+                        // Create LDIF modification for this entry
+                        ldifContent.append("dn: ").append(dn).append("\n");
+                        ldifContent.append("changetype: modify\n");
+                        
+                        if (modificationType.equals("ADD")) {
+                            ldifContent.append("add: ").append(attribute).append("\n");
+                            ldifContent.append(attribute).append(": ").append(value).append("\n");
+                        } else if (modificationType.equals("DELETE")) {
+                            ldifContent.append("delete: ").append(attribute).append("\n");
+                            if (value != null && !value.isEmpty()) {
+                                ldifContent.append(attribute).append(": ").append(value).append("\n");
+                            }
+                        } else if (modificationType.equals("REPLACE")) {
+                            ldifContent.append("replace: ").append(attribute).append("\n");
+                            ldifContent.append(attribute).append(": ").append(value).append("\n");
+                        }
+                        
+                        ldifContent.append("-\n\n");
+                        entryCount++;
+                    }
+                    
+                    final int finalEntryCount = entryCount;
+                    
+                    // Update UI on JavaFX thread
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            ldifTextArea.setText(ldifContent.toString());
+                            progressBar.setVisible(false);
+                            
+                            if (finalEntryCount == 0) {
+                                statusLabel.setText("No entries found matching filter");
+                                statusLabel.setStyle("-fx-text-fill: orange;");
+                            } else {
+                                statusLabel.setText("Created LDIF modifications for " + finalEntryCount + " entries");
+                                statusLabel.setStyle("-fx-text-fill: green;");
+                            }
+                        }
+                    });
+                    
+                } catch (Exception e) {
+                    logger.error("Error creating LDIF modifications: {}", e.getMessage(), e);
+                    
+                    Platform.runLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            progressBar.setVisible(false);
+                            statusLabel.setText("Error: " + e.getMessage());
+                            statusLabel.setStyle("-fx-text-fill: red;");
+                            GuiHelper.ERROR("Error", "Failed to create LDIF: " + e.getMessage());
+                        }
+                    });
+                }
+            }
+        });
     }
 
     private void executeLdif() {
