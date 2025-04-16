@@ -674,4 +674,18 @@ public class LdifEditorController implements ILoader {
             this.stage.initOwner(stage);
         }
     }
+
+    /**
+     * Sets the currently selected DN from the LDAP Explorer in the base DN field
+     * 
+     * @param selectedDN The selected DN from the LDAP Explorer
+     */
+    public void setSelectedDN(String selectedDN) {
+        if (selectedDN != null && !selectedDN.isEmpty()) {
+            baseDnField.setText(selectedDN);
+            
+            // Generate a basic filter to find this entry and all child entries
+            ldapFilterField.setText("(objectClass=*)");
+        }
+    }
 }

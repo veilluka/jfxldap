@@ -1257,16 +1257,16 @@ public class LdapExploreController implements IProgress, ILoader {
             return;
         }
         
-        // Get the LDIF Editor controller from the controller manager
         LdifEditorController ldifEditor = _main._ctManager._ldifEditorController;
-        
-        // Set the owner so the editor appears as a modal dialog
         ldifEditor.setOwner(_stage);
-        
-        // Pass the reference to this controller to the LDIF editor
         ldifEditor.setLdapExploreController(this);
         
-        // Show the editor
+        // Pre-select the currently selected DN in the LDIF Editor
+        if (_observedEntry != null && _observedEntry.getValue() != null) {
+            String selectedDN = _observedEntry.getValue().getDn();
+            ldifEditor.setSelectedDN(selectedDN);
+        }
+        
         ldifEditor.show();
     }
 
