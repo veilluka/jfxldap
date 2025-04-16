@@ -5,6 +5,17 @@ import ch.vilki.jfxldap.backend.IProgress;
 import ch.vilki.jfxldap.backend.SearchEntry;
 import ch.vilki.jfxldap.backend.SearchTree;
 import com.unboundid.ldap.sdk.ModifyRequest;
+import com.unboundid.ldap.sdk.Modification;
+import com.unboundid.ldap.sdk.ModificationType;
+import com.unboundid.ldap.sdk.ResultCode;
+import com.unboundid.ldap.sdk.LDAPResult;
+import com.unboundid.ldap.sdk.LDAPConnection;
+import com.unboundid.ldap.sdk.LDAPException;
+import com.unboundid.ldap.sdk.LDAPConnectionOptions;
+import com.unboundid.ldap.sdk.BindResult;
+import com.unboundid.util.ssl.SSLUtil;
+import com.unboundid.util.ssl.TrustAllTrustManager;
+import javax.net.ssl.SSLSocketFactory;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -57,6 +68,8 @@ public class SearchResultController implements ILoader, IProgress {
     MenuItem _deleteEntry = new MenuItem(TAB+"Delete entry",Icons.get_iconInstance().getIcon(Icons.ICON_NAME.CLOSE_FILE));
     MenuItem _exportEntry = new MenuItem(TAB+"File export",Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
     MenuItem _clipBoardLDIF = new MenuItem(TAB+"Clipboard LDIF",Icons.get_iconInstance().getIcon(Icons.ICON_NAME.COPY_PASTE_SMALL));
+    MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
+    MenuItem _verifyPassword = new MenuItem(TAB + "Verify Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
 
 
     Main _main;
@@ -115,11 +128,15 @@ public class SearchResultController implements ILoader, IProgress {
         });
         _exportEntry.setOnAction(x->exportTree());
         _clipBoardLDIF.setOnAction(x->copyToClipboard());
+        _setPassword.setOnAction(x->setPassword());
+        _verifyPassword.setOnAction(x->verifyPassword());
 
         _searchResultcontextMenu.getItems().add(_deleteEntry);
         _searchResultcontextMenu.getItems().add(_replace_value);
         _searchResultcontextMenu.getItems().add(_exportEntry);
         _searchResultcontextMenu.getItems().add(_clipBoardLDIF);
+        _searchResultcontextMenu.getItems().add(_setPassword);
+        _searchResultcontextMenu.getItems().add(_verifyPassword);
         _searchResultcontextMenu.getItems().forEach(x->x.setStyle("-fx-font: 10px \"Segoe UI\";  -fx-font-weight:bold;"));
     }
 
@@ -209,7 +226,7 @@ public class SearchResultController implements ILoader, IProgress {
                 Platform.runLater(()-> {
                     _main._ctManager._progressWindowController._stage.close();
                     // Update UI after deletion completes
-                    for(TreeItem item: finalListToBeDeleted)
+                    for(TreeItem<SearchEntry> item: finalListToBeDeleted)
                     {
                         if(item.getParent() != null) {
                             item.getParent().getChildren().remove(item);
@@ -220,6 +237,172 @@ public class SearchResultController implements ILoader, IProgress {
                 executor.shutdown();
             }
         });
+    }
+
+    private void setPassword()
+    {
+        TreeItem<SearchEntry> selected = _searchTree.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getValue() == null) {
+            GuiHelper.ERROR("Error", "No entry selected");
+            return;
+        }
+    
+        // Ask for the new password using the improved dialog with confirmation
+        String password = GuiHelper.enterPasswordWithConfirmation(
+            "Set Password", 
+            "Set new password for user", 
+            selected.getValue().getDn()
+        );
+        
+        // If password is null or empty, the user canceled the dialog
+        if (password == null || password.isEmpty()) {
+            return;
+        }
+    
+        try {
+            // Get the current connection
+            LdapExploreController controller = get_ldapExploreController();
+            if (controller == null || controller.get_currentConnection() == null) {
+                GuiHelper.ERROR("Error", "No active LDAP connection");
+                return;
+            }
+            
+            // Try different password formats depending on the LDAP server
+            Modification mod;
+            
+            // Check if this is Active Directory
+            boolean isActiveDirectory = false;
+            if (controller.get_currentConnection().getVendor() != null && 
+                controller.get_currentConnection().getVendor().toLowerCase().contains("microsoft")) {
+                isActiveDirectory = true;
+            } else if (controller.get_currentConnection().get_rootDSE() != null && 
+                     controller.get_currentConnection().get_rootDSE().hasAttribute("forestFunctionality")) {
+                isActiveDirectory = true;
+            }
+            
+            if (isActiveDirectory) {
+                // For Active Directory, use unicodePwd with special formatting
+                String quotedPassword = "\"" + password + "\"";
+                byte[] unicodePassword = quotedPassword.getBytes("UTF-16LE");
+                mod = new Modification(ModificationType.REPLACE, "unicodePwd", unicodePassword);
+                logger.info("Setting password using Active Directory format (unicodePwd attribute)");
+            } else {
+                // For standard LDAP servers like OpenLDAP
+                mod = new Modification(ModificationType.REPLACE, "userPassword", password);
+                logger.info("Setting password using standard LDAP format (userPassword attribute)");
+            }
+            
+            ModifyRequest modifyRequest = new ModifyRequest(selected.getValue().getDn(), mod);
+            
+            // Execute the modify operation
+            LDAPResult result = controller.get_currentConnection().modify(modifyRequest);
+            
+            if (result.getResultCode().equals(ResultCode.SUCCESS)) {
+                GuiHelper.INFO("Success", "Password updated successfully");
+            } else {
+                GuiHelper.ERROR("Error", "Failed to update password: " + result.getDiagnosticMessage());
+            }
+        } catch (Exception e) {
+            GuiHelper.EXCEPTION("Error setting password", "An error occurred while setting the password", e);
+            logger.error("Error setting password", e);
+        }
+    }
+
+    private void verifyPassword()
+    {
+        TreeItem<SearchEntry> selected = _searchTree.getSelectionModel().getSelectedItem();
+        if (selected == null || selected.getValue() == null) {
+            GuiHelper.ERROR("Error", "No entry selected");
+            return;
+        }
+    
+        // Get the DN of the selected entry
+        String entryDN = selected.getValue().getDn();
+        
+        // Ask for the password to verify
+        String password = GuiHelper.enterPassword(
+            "Verify Password", 
+            "Enter password to verify for: " + entryDN
+        );
+        
+        // If password is null or empty, the user canceled the dialog
+        if (password == null || password.isEmpty()) {
+            return;
+        }
+    
+        LDAPConnection verifyConn = null;
+        try {
+            logger.info("Attempting to verify password for entry: {}", entryDN);
+            
+            // Get the current controller and connection
+            LdapExploreController controller = get_ldapExploreController();
+            if (controller == null || controller.get_currentConnection() == null) {
+                GuiHelper.ERROR("Error", "No active LDAP connection");
+                return;
+            }
+            
+            // Get the current connection's server and port
+            String host = controller.get_currentConnection().getServer();
+            int port = controller.get_currentConnection().getPortNumber();
+            boolean useSSL = controller.get_currentConnection().isSSL();
+            
+            // Configure connection options for better timeout handling
+            LDAPConnectionOptions options = new LDAPConnectionOptions();
+            options.setConnectTimeoutMillis(10000);  // 10 seconds
+            options.setResponseTimeoutMillis(20000); // 20 seconds
+            
+            // Create a new connection with the entry's DN and provided password
+            if (useSSL) {
+                // Use the SSL connection with expanded options
+                try {
+                    SSLUtil sslUtil = new SSLUtil(new TrustAllTrustManager());
+                    SSLSocketFactory socketFactory = sslUtil.createSSLSocketFactory();
+                    
+                    // First establish connection without binding
+                    verifyConn = new LDAPConnection(socketFactory, options, host, port);
+                    
+                    // Then perform a separate bind operation
+                    BindResult bindResult = verifyConn.bind(entryDN, password);
+                    if (bindResult.getResultCode() == ResultCode.SUCCESS) {
+                        GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
+                    }
+                } catch (Exception sslEx) {
+                    logger.error("SSL error during password verification", sslEx);
+                    throw new LDAPException(ResultCode.CONNECT_ERROR, 
+                        "SSL connection error: " + sslEx.getMessage());
+                }
+            } else {
+                // Standard non-SSL connection
+                // First establish connection without binding
+                verifyConn = new LDAPConnection(options, host, port);
+                
+                // Then perform a separate bind operation
+                BindResult bindResult = verifyConn.bind(entryDN, password);
+                if (bindResult.getResultCode() == ResultCode.SUCCESS) {
+                    GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
+                }
+            }
+        } catch (LDAPException e) {
+            // Check the result code to provide a more specific error message
+            if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
+                GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
+            } else {
+                GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
+            }
+            logger.error("Error verifying password", e);
+        } catch (Exception e) {
+            GuiHelper.EXCEPTION("Error", "An unexpected error occurred while verifying the password", e);
+            logger.error("Unexpected error during password verification", e);
+        } finally {
+            // Always close the connection
+            if (verifyConn != null) {
+                try {
+                    verifyConn.close();
+                } catch (Exception e) {
+                    logger.error("Error closing connection", e);
+                }
+            }
+        }
     }
 
     @FXML
