@@ -74,6 +74,8 @@ class ControllerManager(main: Main) {
         _keyStoreController = initController("KeyStoreWindow.fxml") as KeyStoreController
         _exportAttributeController = ExportAttributeController()
         _ldifEditorController = initController("LdifEditor.fxml") as LdifEditorController
+        _ldifEditorController.setOwner(_main._primaryStage)
+
 
         _settingsController.readConfiguration()
     }

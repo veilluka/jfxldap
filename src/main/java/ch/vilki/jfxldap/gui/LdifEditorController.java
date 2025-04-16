@@ -621,10 +621,42 @@ public class LdifEditorController implements ILoader {
             logger.error("Stage is null, cannot show LDIF Editor");
             return;
         }
-        stage.show();
+        
+        // Reset UI elements each time the dialog is shown
+        resetDialog();
+        
+        // Ensure stage properties are set correctly
+        if (!stage.isShowing()) {
+            stage.show();
+        } else {
+            // If already showing, bring to front
+            stage.toFront();
+            stage.requestFocus();
+        }
+    }
+    
+    /**
+     * Resets the dialog UI elements to their default state for a fresh start
+     */
+    private void resetDialog() {
+        // Clear LDIF text area
+        ldifTextArea.clear();
+        
+        // Reset status message
+        statusLabel.setText("Ready");
+        statusLabel.setStyle("");
+        
+        // Hide progress bar
+        progressBar.setVisible(false);
+        
+        // Make sure the cancel button works to properly close the window
+        if (cancelButton.getOnAction() == null) {
+            cancelButton.setOnAction(event -> {
+                stage.close();
+            });
+        }
     }
 
-    @Override
     public void setMain(Main main) {
         this.main = main;
     }
@@ -657,7 +689,6 @@ public class LdifEditorController implements ILoader {
         }
     }
 
-    @Override
     public void setWindow(Parent parent) {
         rootPane = (BorderPane) parent;
         scene = new Scene(rootPane);
@@ -668,7 +699,6 @@ public class LdifEditorController implements ILoader {
         stage.initStyle(StageStyle.DECORATED);
     }
 
-    @Override
     public void setOwner(Stage stage) {
         if (this.stage != null) {
             this.stage.initOwner(stage);

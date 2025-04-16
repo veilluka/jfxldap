@@ -102,7 +102,7 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
     MenuItem _verifyPassword = new MenuItem(TAB + "Verify Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
     MenuItem _exportAttribute = new MenuItem(TAB + "Export Attribute", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
-    MenuItem _ldifEditor = new MenuItem(TAB + "LDIF Editor", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REFRESH));
+    MenuItem _ldifEditor = new MenuItem(TAB + "Batch Modify", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REFRESH));
 
     /*------------- PROGRESS PANE ----------------------- */
     @FXML
@@ -1256,18 +1256,12 @@ public class LdapExploreController implements IProgress, ILoader {
             GuiHelper.ERROR("Connection Required", "You must have an active LDAP connection to use the LDIF Editor");
             return;
         }
-        
-        LdifEditorController ldifEditor = _main._ctManager._ldifEditorController;
-        ldifEditor.setOwner(_stage);
-        ldifEditor.setLdapExploreController(this);
-        
-        // Pre-select the currently selected DN in the LDIF Editor
+        _main._ctManager._ldifEditorController.setLdapExploreController(_main._ctManager._ldapSourceExploreCtrl);
         if (_observedEntry != null && _observedEntry.getValue() != null) {
             String selectedDN = _observedEntry.getValue().getDn();
-            ldifEditor.setSelectedDN(selectedDN);
+            _main._ctManager._ldifEditorController.setSelectedDN(selectedDN);
         }
-        
-        ldifEditor.show();
+        _main._ctManager._ldifEditorController.show();
     }
 
     /**
