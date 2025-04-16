@@ -3,7 +3,6 @@ package ch.vilki.jfxldap.gui;
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.*;
 import com.unboundid.ldap.sdk.*;
-import com.unboundid.ldap.sdk.schema.Schema;
 import com.unboundid.ldif.LDIFException;
 import com.unboundid.ldif.LDIFReader;
 import com.unboundid.util.ssl.SSLUtil;
@@ -18,8 +17,8 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
-import javafx.event.Event;
 import javafx.event.EventHandler;
+import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
@@ -95,7 +94,7 @@ public class LdapExploreController implements IProgress, ILoader {
     MenuItem _setPassword = new MenuItem(TAB + "Set Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
     MenuItem _verifyPassword = new MenuItem(TAB + "Verify Password", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
     MenuItem _exportAttribute = new MenuItem(TAB + "Export Attribute", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.EXPORT_SMALL));
-
+    MenuItem _ldifEditor = new MenuItem(TAB + "LDIF Editor", Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REFRESH));
 
     /*------------- PROGRESS PANE ----------------------- */
     @FXML
@@ -413,7 +412,9 @@ public class LdapExploreController implements IProgress, ILoader {
         _setPassword.setOnAction(e -> setUserPassword());
         _verifyPassword.setOnAction(e -> verifyPassword());
         _exportAttribute.setOnAction(e -> _main._ctManager._exportAttributeController.showExportAttributeWindow(get_currentConnection(), _observedEntry.getValue().getDn()));
-        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, _deleteEntry, _setPassword, _verifyPassword, _exportAttribute);
+        _ldifEditor.setOnAction(e -> openLdifEditor());
+        _contextMenu.getItems().addAll(_search, _compareItem, _setDisplayAttribute, _export, _clipBoardLDIF, 
+                _deleteEntry, _setPassword, _verifyPassword, _exportAttribute, _ldifEditor);
         _contextMenu.getItems().forEach(x -> x.setStyle(Styling.SMALL_MENU_TEXT_BOLD));
         _buttonConnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.CONNECT_ICON));
         _buttonDisconnect.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.DISCONNECT_ICON));
@@ -446,7 +447,7 @@ public class LdapExploreController implements IProgress, ILoader {
         });
 
         _buttonReload.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.REFRESH));
-_buttonReload.setOnAction(e -> refreshSelectedEntry());
+        _buttonReload.setOnAction(e -> refreshSelectedEntry());
 
         _expandedListenerOnline = (ChangeListener<Boolean>) (observable, oldValue, newValue) -> {
             BooleanProperty bb = (BooleanProperty) observable;
@@ -733,84 +734,15 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
         }
     }
 
-    private void addEntriesFromLdif(TreeItem<CustomEntryItem> treeEntry, Entry entry, String dn) {
-        if (dn.length() == 0) return;
-        String[] split = dn.split(",");
-        if (split == null || split.length == 1) {
-            TreeItem<CustomEntryItem> insert = findChild(treeEntry, dn);
-            ObservableList<TreeItem<CustomEntryItem>> backup = null;
-            if (insert != null) {
-                backup = insert.getChildren();
-                treeEntry.getChildren().remove(insert);
-            }
-            CustomEntryItem CustomEntryItem = new CustomEntryItem(entry);
-            TreeItem<CustomEntryItem> ti = new TreeItem<>(CustomEntryItem);
-            ti.expandedProperty().addListener(_expandedListenerFile);
-            treeEntry.getChildren().add(ti);
-            if (backup != null && !backup.isEmpty()) {
-                ti.getChildren().addAll(backup);
-            }
-            return;
-        }
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < split.length - 1; i++) {
-            builder.append(split[i]);
-            builder.append(",");
-        }
-        builder.deleteCharAt(builder.length() - 1);
-
-        TreeItem<CustomEntryItem> child = findChild(treeEntry, split[split.length - 1]);
-        if (child == null) {
-            String dummyDN = entry.getDN().replace(builder.toString() + ",", "");
-            CustomEntryItem CustomEntryItem = new CustomEntryItem(dummyDN);
-            CustomEntryItem.setDummy();
-
-            CustomEntryItem.set_dn(new SimpleStringProperty(dummyDN));
-            List<Attribute> newAttributes = new ArrayList<>();
-            Attribute attribute = new Attribute("description", "this entry is not in file");
-            newAttributes.add(attribute);
-            Entry entry1 = new Entry(dummyDN, newAttributes);
-            entry1.setDN(dummyDN);
-            CustomEntryItem.setEntry(entry1);
-            CustomEntryItem.setRdn(split[split.length - 1]);
-            child = new TreeItem<>(CustomEntryItem);
-
-            child.expandedProperty().addListener(_expandedListenerFile);
-            treeEntry.getChildren().add(child);
-
-        }
-        addEntriesFromLdif(child, entry, builder.toString());
-    }
-
-
-    void connect(Connection connection) throws LDAPException, GeneralSecurityException {
+    private void connect(Connection connection) throws LDAPException, GeneralSecurityException {
         connection.connect();
         RootDSE root = connection.getRootDSE();
         System.out.println("SUPPORTS->" + root.supportsControl("1.2.840.113556.1.4.319"));
-        String urls[] = root.getAltServerURIs();
-        String rootdn = root.getDN();
-        String context[] = root.getNamingContextDNs();
-        String selectedValue = connection.getBaseDN();
-        if (selectedValue == null && context == null) {
-            Filter f = Filter.create("(objectclass=*)");
-            SearchResult found = connection.search("", SearchScope.ONE, f, (String[]) null);
-            if (found != null && found.getEntryCount() > 0) {
-                context = new String[found.getEntryCount()];
-                for (int i = 0; i < found.getEntryCount(); i++) {
-                    context[i] = found.getSearchEntries().get(i).getDN();
-                }
-            }
-        }
-        if (selectedValue == null) {
-            selectedValue = GuiHelper.selectValue("LDA Context", "LDAP Context not set ", "SELECT", context);
-        }
-        if (selectedValue == null && context != null) selectedValue = context[0];
-        if (connection.getBaseDN() == null) connection.setBaseDN(selectedValue);
-        String subschema = root.getSubschemaSubentryDN();
-        String[] features = root.getSupportedFeatureOIDs();
-        String vendor = root.getVendorName();
-        Schema schema = connection.getSchema();
-        System.out.println("VENDOR IS->" + vendor);
+        _currConnection = connection;
+        _buttonConnect.setDisable(true);
+        _buttonDisconnect.setDisable(false);
+        _buttonUploadFile.setDisable(false);
+        _hboxFilter.setDisable(false);
     }
 
     @Override
@@ -869,6 +801,43 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
             }
         }
         Platform.runLater(() -> _treeView.refresh());
+    }
+
+    public void refreshTree_checkAddedEntries(TreeItem<CustomEntryItem> entryTreeItem) {
+        String searchDN = entryTreeItem.getValue().getDn();
+        Set<String> childrenDN = new HashSet<>();
+        for (TreeItem<CustomEntryItem> c : entryTreeItem.getChildren()) {
+            childrenDN.add(c.getValue().getDn());
+        }
+        _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
+                searchDN, null, null);
+        if (get_currentConnection().getDisplayAttribute() != null) {
+            _currentReader.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
+        }
+        _currentReader.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Future<?> future = executor.submit(_currentReader);
+        try {
+            future.get();
+            for (Entry c : _currentReader.get_children()) {
+                if (!childrenDN.contains(c.getDN())) {
+                    CustomEntryItem customEntryItem = new CustomEntryItem(c);
+                    TreeItem<CustomEntryItem> item = new TreeItem<>(customEntryItem);
+                    Entry child = null;
+                    try {
+                        child = _currentReader.getOneChild(customEntryItem.getEntry().getDN());
+                    } catch (Exception e) { }
+                    if (child != null) {
+                        CustomEntryItem customEntryItemDummy = new CustomEntryItem(child);
+                        customEntryItemDummy.setDummy();
+                        item.expandedProperty().addListener(_expandedListenerOnline);
+                        item.getChildren().add(new TreeItem<>(customEntryItemDummy));
+                    }
+                    entryTreeItem.getChildren().add(item);
+                    _treeView.refresh();
+                }
+            }
+        } catch (Exception e) { }
     }
 
     public void signalTaskDone(String taskName, String description, Exception e) {
@@ -1063,7 +1032,8 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
                 set_currentConnection(connection);
                 _buttonConnect.fireEvent(_connectionEstablishedEvent);
                 if (initTree) {
-                    _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(), get_currentConnection().getBaseDN(), null, _this);
+                    _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
+                            get_currentConnection().getBaseDN(), null, _this);
                     if (get_currentConnection().getDisplayAttribute() != null)
                         _currentReader.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
                     _currentReader.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none);
@@ -1078,43 +1048,6 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
             }
         }
         _textFieldLdapFilter.set_currConnection(_currConnection);
-    }
-
-    public void refreshTree_checkAddedEntries(TreeItem<CustomEntryItem> entryTreeItem) {
-        String searchDN = entryTreeItem.getValue().getDn();
-        Set<String> childrenDN = new HashSet<>();
-        for (TreeItem<CustomEntryItem> c : entryTreeItem.getChildren()) {
-            childrenDN.add(c.getValue().getDn());
-        }
-        _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
-                searchDN, null, null);
-        if (get_currentConnection().getDisplayAttribute() != null) {
-            _currentReader.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
-        }
-        _currentReader.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none);
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Future<?> future = executor.submit(_currentReader);
-        try {
-            future.get();
-            for (Entry c : _currentReader.get_children()) {
-                if (!childrenDN.contains(c.getDN())) {
-                    CustomEntryItem CustomEntryItem = new CustomEntryItem(c);
-                    TreeItem<CustomEntryItem> item = new TreeItem<>(CustomEntryItem);
-                    Entry child = null;
-                    try {
-                        child = _currentReader.getOneChild(CustomEntryItem.getEntry().getDN());
-                    } catch (Exception e) { }
-                    if (child != null) {
-                        CustomEntryItem CustomEntryItemDummy = new CustomEntryItem(child);
-                        CustomEntryItemDummy.setDummy();
-                        item.expandedProperty().addListener(_expandedListenerOnline);
-                        item.getChildren().add(new TreeItem<>(CustomEntryItemDummy));
-                    }
-                    entryTreeItem.getChildren().add(item);
-                    _treeView.refresh();
-                }
-            }
-        } catch (Exception e) { }
     }
 
     public void setMain(Main main) {
@@ -1173,8 +1106,38 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
                             _selectedDN = _observedEntry.getValue().getDn();
                             //_main.get_entryDiffView().updateValues(_observedEntry.getValue());
                             _treeView.fireEvent(new LdapExplorerEvent(LdapExplorerEvent.ELEMENT_SELECTED, _observedEntry));
-                            _hboxFilter.setDisable(false);
+                            _main._ctManager._progressWindowController.clearProgressWindow();
+                            if (_observedEntry.isExpanded()) {
+                                if (_observedEntry.getChildren().size() == 1 && _observedEntry.getChildren().get(0).getValue().is_dummy()) {
+                                    _observedEntry.getChildren().get(0).expandedProperty().removeListener(_expandedListenerOnline);
+                                    _observedEntry.getChildren().clear();
+                                    _progressStage.show();
+                                    _currentReader = new UnboundidLdapSearch(_main._configuration, get_currentConnection(),
+                                            _observedEntry.getValue().getEntry().getDN(), null, _this);
+                                    if (get_currentConnection().getDisplayAttribute() != null) {
+                                        _currentReader.setDisplayAttribute(get_currentConnection().getDisplayAttribute());
+                                    }
+                                    _currentReader.setReadAttributes(UnboundidLdapSearch.READ_ATTRIBUTES.none);
+                                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                                    executor.submit(() -> _executor.execute(_currentReader));
+                                }
+                            }
+                            else{
+                                _treeView.autosize();
+                                _treeView.refresh();
 
+                            }
+                            /*
+                            else {
+                                _treeView.getRoot().getChildren().forEach(x->{
+                                    _treeView.refresh();
+                                });
+                            }
+
+                             */
+                        }
+                        else{
+                            _treeView.getSelectionModel().select(_observedEntry);
                         }
                     }
                 });
@@ -1277,6 +1240,28 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
     }
 
     /**
+     * Opens the LDIF Editor with the current connection
+     */
+    private void openLdifEditor() {
+        if (_currConnection == null) {
+            GuiHelper.ERROR("Connection Required", "You must have an active LDAP connection to use the LDIF Editor");
+            return;
+        }
+        
+        // Get the LDIF Editor controller from the controller manager
+        LdifEditorController ldifEditor = _main._ctManager._ldifEditorController;
+        
+        // Set the owner so the editor appears as a modal dialog
+        ldifEditor.setOwner(_stage);
+        
+        // Pass the reference to this controller to the LDIF editor
+        ldifEditor.setLdapExploreController(this);
+        
+        // Show the editor
+        ldifEditor.show();
+    }
+
+    /**
      * Refreshes the selected entry and all expanded entries below it.
      * This method is triggered when F5 is pressed on a selected entry.
      */
@@ -1364,7 +1349,10 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
             logger.error("Error checking entry " + entryTreeItem.getValue().getDn() + ": " + e.getMessage(), e);
         }
     }
-
+    
+    /**
+     * Sets the password for the selected LDAP entry.
+     */
     private void setUserPassword() {
         if (_observedEntry == null || _observedEntry.getValue() == null || _observedEntry.getValue().getEntry() == null) {
             GuiHelper.ERROR("Error", "No entry selected");
@@ -1426,70 +1414,118 @@ _buttonReload.setOnAction(e -> refreshSelectedEntry());
     }
 
     /**
- * Verifies if a password is valid for the selected LDAP entry.
- * This method tests the password by attempting to bind to the LDAP server
- * using the entry's DN and the provided password.
- */
-private void verifyPassword() {
-    if (_observedEntry == null || _observedEntry.getValue() == null || _observedEntry.getValue().getEntry() == null) {
-        GuiHelper.ERROR("Error", "No entry selected");
-        return;
-    }
-    
-    // Get the DN of the selected entry
-    String entryDN = _observedEntry.getValue().getDn();
-    
-    // Ask for the password to verify
-    String password = GuiHelper.enterPassword(
-        "Verify Password", 
-        "Enter password to verify for: " + entryDN
-    );
-    
-    // If password is null or empty, the user canceled the dialog
-    if (password == null || password.isEmpty()) {
-        return;
-    }
-    
-    try {
-        logger.info("Attempting to verify password for entry: {}", entryDN);
-        
-        // Create a new connection with the same settings as the current connection
-        LDAPConnection verifyConn = null;
-        try {
-            // Get the current connection's server and port
-            String host = _currConnection.getServer();
-            int port = _currConnection.getPortNumber();
-            boolean useSSL = _currConnection.isSSL();
-            
-            // Create a new connection with the entry's DN and provided password
-            if (useSSL) {
-                // Use the SSL connection
-                verifyConn = new LDAPConnection(host, port, entryDN, password);
-            } else {
-                verifyConn = new LDAPConnection(host, port, entryDN, password);
-            }
-            
-            // If we get here without an exception, the password is valid
-            GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
-            
-        } catch (LDAPException e) {
-            // Check the result code to provide a more specific error message
-            if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
-                GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
-            } else {
-                GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
-            }
-            logger.error("Error verifying password", e);
-        } finally {
-            // Always close the connection
-            if (verifyConn != null) {
-                verifyConn.close();
-            }
+     * Verifies if a password is valid for the selected LDAP entry.
+     * This method tests the password by attempting to bind to the LDAP server
+     * using the entry's DN and the provided password.
+     */
+    private void verifyPassword() {
+        if (_observedEntry == null || _observedEntry.getValue() == null || _observedEntry.getValue().getEntry() == null) {
+            GuiHelper.ERROR("Error", "No entry selected");
+            return;
         }
-    } catch (Exception e) {
-        GuiHelper.EXCEPTION("Error", "An unexpected error occurred while verifying the password", e);
-        logger.error("Unexpected error during password verification", e);
+    
+        // Get the DN of the selected entry
+        String entryDN = _observedEntry.getValue().getDn();
+        
+        // Ask for the password to verify
+        String password = GuiHelper.enterPassword(
+            "Verify Password", 
+            "Enter password to verify for: " + entryDN
+        );
+        
+        // If password is null or empty, the user canceled the dialog
+        if (password == null || password.isEmpty()) {
+            return;
+        }
+    
+        try {
+            logger.info("Attempting to verify password for entry: {}", entryDN);
+            
+            // Create a new connection with the same settings as the current connection
+            LDAPConnection verifyConn = null;
+            try {
+                // Get the current connection's server and port
+                String host = _currConnection.getServer();
+                int port = _currConnection.getPortNumber();
+                boolean useSSL = _currConnection.isSSL();
+                
+                // Create a new connection with the entry's DN and provided password
+                if (useSSL) {
+                    // Use the SSL connection
+                    verifyConn = new LDAPConnection(host, port, entryDN, password);
+                } else {
+                    verifyConn = new LDAPConnection(host, port, entryDN, password);
+                }
+                
+                // If we get here without an exception, the password is valid
+                GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
+                
+            } catch (LDAPException e) {
+                // Check the result code to provide a more specific error message
+                if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
+                    GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
+                } else {
+                    GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
+                }
+                logger.error("Error verifying password", e);
+            } finally {
+                // Always close the connection
+                if (verifyConn != null) {
+                    verifyConn.close();
+                }
+            }
+        } catch (Exception e) {
+            GuiHelper.EXCEPTION("Error", "An unexpected error occurred while verifying the password", e);
+            logger.error("Unexpected error during password verification", e);
+        }
     }
-}
 
+    private void addEntriesFromLdif(TreeItem<CustomEntryItem> treeEntry, Entry entry, String dn) {
+        if (dn.length() == 0) return;
+        String[] split = dn.split(",");
+        if (split == null || split.length == 1) {
+            TreeItem<CustomEntryItem> insert = findChild(treeEntry, dn);
+            ObservableList<TreeItem<CustomEntryItem>> backup = null;
+            if (insert != null) {
+                backup = insert.getChildren();
+                treeEntry.getChildren().remove(insert);
+            }
+            CustomEntryItem customEntryItem = new CustomEntryItem(entry);
+            TreeItem<CustomEntryItem> ti = new TreeItem<>(customEntryItem);
+            ti.expandedProperty().addListener(_expandedListenerFile);
+            treeEntry.getChildren().add(ti);
+            if (backup != null && !backup.isEmpty()) {
+                ti.getChildren().addAll(backup);
+            }
+            return;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < split.length - 1; i++) {
+            builder.append(split[i]);
+            builder.append(",");
+        }
+        builder.deleteCharAt(builder.length() - 1);
+
+        TreeItem<CustomEntryItem> child = findChild(treeEntry, split[split.length - 1]);
+        if (child == null) {
+            String dummyDN = entry.getDN().replace(builder.toString() + ",", "");
+            CustomEntryItem customEntryItem = new CustomEntryItem(dummyDN);
+            customEntryItem.setDummy();
+
+            customEntryItem.set_dn(new SimpleStringProperty(dummyDN));
+            List<Attribute> newAttributes = new ArrayList<>();
+            Attribute attribute = new Attribute("description", "this entry is not in file");
+            newAttributes.add(attribute);
+            Entry entry1 = new Entry(dummyDN, newAttributes);
+            entry1.setDN(dummyDN);
+            customEntryItem.setEntry(entry1);
+            customEntryItem.setRdn(split[split.length - 1]);
+            child = new TreeItem<>(customEntryItem);
+
+            child.expandedProperty().addListener(_expandedListenerFile);
+            treeEntry.getChildren().add(child);
+
+        }
+        addEntriesFromLdif(child, entry, builder.toString());
+    }
 }

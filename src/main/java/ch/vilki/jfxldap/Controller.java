@@ -214,6 +214,7 @@ public class Controller implements Initializable {
                 GuiHelper.ERROR("Keine Verbindung", "Es ist keine LDAP-Verbindung aktiv. Bitte verbinden Sie sich zuerst mit einem LDAP-Server.");
                 return;
             }
+
             openLdifEditor();
         });
         _keyStore.setOnAction(x->{
@@ -353,7 +354,8 @@ public class Controller implements Initializable {
             } else if (_mainWindow.getScene() != null && _mainWindow.getScene().getWindow() instanceof javafx.stage.Stage) {
                 controller.setOwner((javafx.stage.Stage) _mainWindow.getScene().getWindow());
             }
-            
+            controller.setLdapExploreController(_ctManager._ldapSourceExploreCtrl);
+
             // Show the dialog
             controller.show();
         } catch (java.io.IOException e) {

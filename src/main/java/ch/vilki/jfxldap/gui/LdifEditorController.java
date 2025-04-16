@@ -3,7 +3,6 @@ package ch.vilki.jfxldap.gui;
 import ch.vilki.jfxldap.Main;
 import ch.vilki.jfxldap.backend.Connection;
 import com.unboundid.ldap.sdk.Filter;
-import com.unboundid.ldap.sdk.LDAPConnection;
 import com.unboundid.ldap.sdk.LDAPException;
 import com.unboundid.ldif.LDIFChangeRecord;
 import com.unboundid.ldif.LDIFException;
@@ -25,7 +24,6 @@ import javafx.scene.control.ProgressBar;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -37,9 +35,6 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.security.GeneralSecurityException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -90,6 +85,7 @@ public class LdifEditorController implements ILoader {
     private Scene scene;
     private Main main;
     private Connection currentConnection;
+    private LdapExploreController ldapExploreController;
 
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
@@ -106,7 +102,10 @@ public class LdifEditorController implements ILoader {
         connectionChoiceBox.getSelectionModel().selectedItemProperty().addListener(new ChangeListener<Connection>() {
             @Override
             public void changed(ObservableValue<? extends Connection> observable, Connection oldValue, Connection newValue) {
-
+                if (newValue != null) {
+                    currentConnection = newValue;
+                    updateAttributeComboBox();
+                }
             }
         });
 
@@ -375,9 +374,34 @@ public class LdifEditorController implements ILoader {
     @Override
     public void setMain(Main main) {
         this.main = main;
+    }
+
+    /**
+     * Sets the LdapExploreController reference and initializes the connection
+     * @param controller The LdapExploreController instance
+     */
+    public void setLdapExploreController(LdapExploreController controller) {
+        this.ldapExploreController = controller;
         
-        // Populate connection choice box from settings
-        connectionChoiceBox.setItems(Main._ctManager._settingsController._connectionObservableList);
+        if (ldapExploreController != null) {
+            // Get the current connection from the LdapExploreController
+            Connection explorerConnection = ldapExploreController.get_currentConnection();
+            
+            if (explorerConnection != null) {
+                // Set the current connection
+                this.currentConnection = explorerConnection;
+                
+                // Set the connection in the choice box and disable it
+                connectionChoiceBox.getSelectionModel().select(explorerConnection);
+                connectionChoiceBox.setDisable(true);
+                
+                // Update the attribute combo box with schema attributes
+                updateAttributeComboBox();
+            } else {
+                logger.error("No active LDAP connection in LdapExploreController");
+                GuiHelper.ERROR("Connection Error", "No active LDAP connection available");
+            }
+        }
     }
 
     @Override
