@@ -196,7 +196,7 @@ public class GuiHelper {
         ButtonType loginButtonType = new ButtonType("OK", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
         Icons ic = new Icons();
-        dialog.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.KEY));
+        dialog.setGraphic(Icons.get_iconInstance().getIcon(Icons.ICON_NAME.PASSWORD));
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);

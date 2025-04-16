@@ -6,6 +6,14 @@ import com.unboundid.ldap.sdk.*;
 import com.unboundid.ldif.LDIFException;
 import com.unboundid.ldif.LDIFReader;
 import com.unboundid.util.ssl.SSLUtil;
+import com.unboundid.util.ssl.TrustAllTrustManager;
+import javax.net.ssl.SSLSocketFactory;
+import com.unboundid.ldap.sdk.LDAPConnection;
+import com.unboundid.ldap.sdk.LDAPConnectionOptions;
+import com.unboundid.ldap.sdk.LDAPException;
+import com.unboundid.ldap.sdk.LDAPResult;
+import com.unboundid.ldap.sdk.ResultCode;
+import com.unboundid.ldap.sdk.BindResult;
 import javafx.application.Platform;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -1075,6 +1083,7 @@ public class LdapExploreController implements IProgress, ILoader {
                     protected void updateItem(CustomEntryItem item, boolean empty) {
                         textProperty().unbind();
                         styleProperty().unbind();
+                        graphicProperty().unbind();
                         if (empty || item == null) {
                             setGraphic(null);
                             textProperty().set(null);
@@ -1438,45 +1447,71 @@ public class LdapExploreController implements IProgress, ILoader {
             return;
         }
     
+        LDAPConnection verifyConn = null;
         try {
             logger.info("Attempting to verify password for entry: {}", entryDN);
             
-            // Create a new connection with the same settings as the current connection
-            LDAPConnection verifyConn = null;
-            try {
-                // Get the current connection's server and port
-                String host = _currConnection.getServer();
-                int port = _currConnection.getPortNumber();
-                boolean useSSL = _currConnection.isSSL();
-                
-                // Create a new connection with the entry's DN and provided password
-                if (useSSL) {
-                    // Use the SSL connection
-                    verifyConn = new LDAPConnection(host, port, entryDN, password);
-                } else {
-                    verifyConn = new LDAPConnection(host, port, entryDN, password);
+            // Get the current connection's server and port
+            String host = _currConnection.getServer();
+            int port = _currConnection.getPortNumber();
+            boolean useSSL = _currConnection.isSSL();
+            
+            // Configure connection options for better timeout handling
+            LDAPConnectionOptions options = new LDAPConnectionOptions();
+            options.setConnectTimeoutMillis(10000);  // 10 seconds
+            options.setResponseTimeoutMillis(20000); // 20 seconds
+            
+            // Create a new connection with the entry's DN and provided password
+            if (useSSL) {
+                // Use the SSL connection with expanded options
+                try {
+                    SSLUtil sslUtil = new SSLUtil(new TrustAllTrustManager());
+                    SSLSocketFactory socketFactory = sslUtil.createSSLSocketFactory();
+                    
+                    // First establish connection without binding
+                    verifyConn = new LDAPConnection(socketFactory, options, host, port);
+                    
+                    // Then perform a separate bind operation
+                    BindResult bindResult = verifyConn.bind(entryDN, password);
+                    if (bindResult.getResultCode() == ResultCode.SUCCESS) {
+                        GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
+                    }
+                } catch (Exception sslEx) {
+                    logger.error("SSL error during password verification", sslEx);
+                    throw new LDAPException(ResultCode.CONNECT_ERROR, 
+                        "SSL connection error: " + sslEx.getMessage());
                 }
+            } else {
+                // Standard non-SSL connection
+                // First establish connection without binding
+                verifyConn = new LDAPConnection(options, host, port);
                 
-                // If we get here without an exception, the password is valid
-                GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
-                
-            } catch (LDAPException e) {
-                // Check the result code to provide a more specific error message
-                if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
-                    GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
-                } else {
-                    GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
-                }
-                logger.error("Error verifying password", e);
-            } finally {
-                // Always close the connection
-                if (verifyConn != null) {
-                    verifyConn.close();
+                // Then perform a separate bind operation
+                BindResult bindResult = verifyConn.bind(entryDN, password);
+                if (bindResult.getResultCode() == ResultCode.SUCCESS) {
+                    GuiHelper.INFO("Success", "Password is valid for entry: " + entryDN);
                 }
             }
+        } catch (LDAPException e) {
+            // Check the result code to provide a more specific error message
+            if (e.getResultCode().equals(ResultCode.INVALID_CREDENTIALS)) {
+                GuiHelper.ERROR("Authentication Failed", "The password is incorrect for entry: " + entryDN);
+            } else {
+                GuiHelper.ERROR("Error", "Failed to verify password: " + e.getMessage());
+            }
+            logger.error("Error verifying password", e);
         } catch (Exception e) {
             GuiHelper.EXCEPTION("Error", "An unexpected error occurred while verifying the password", e);
             logger.error("Unexpected error during password verification", e);
+        } finally {
+            // Always close the connection
+            if (verifyConn != null) {
+                try {
+                    verifyConn.close();
+                } catch (Exception ex) {
+                    logger.warn("Error closing verification connection", ex);
+                }
+            }
         }
     }
 
