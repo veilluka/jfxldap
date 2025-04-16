@@ -23,6 +23,10 @@
             <ChoiceBox fx:id="connectionChoiceBox" prefWidth="350.0" />
          </HBox>
          <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Base DN:" />
+            <TextField fx:id="baseDnField" HBox.hgrow="ALWAYS" promptText="Enter base DN (starting point for search)" />
+         </HBox>
+         <HBox spacing="10" alignment="CENTER_LEFT">
             <Label text="LDAP Filter:" />
             <TextField fx:id="ldapFilterField" HBox.hgrow="ALWAYS" promptText="Enter LDAP filter (e.g., (objectClass=person))" />
             <Button fx:id="applyFilterButton" text="Apply" />
@@ -35,9 +39,14 @@
          </HBox>
          <HBox spacing="10" alignment="CENTER_LEFT">
             <Label text="Value:" />
-            <TextField fx:id="attributeValueField" HBox.hgrow="ALWAYS" promptText="Enter attribute value" />
-            <Button fx:id="addModificationButton" text="Add to LDIF" />
+            <VBox HBox.hgrow="ALWAYS">
+               <TextArea fx:id="attributeValueArea" prefHeight="60.0" promptText="Enter attribute value" wrapText="true" />
+            </VBox>
+            <Button fx:id="addModificationButton" text="Create LDIF" />
          </HBox>
+         <padding>
+            <Insets bottom="20.0" />
+         </padding>
       </VBox>
    </top>
    <center>

@@ -52,6 +52,9 @@ public class LdifEditorController implements ILoader {
     private ChoiceBox<Connection> connectionChoiceBox;
 
     @FXML
+    private TextField baseDnField;
+
+    @FXML
     private Button executeButton;
 
     @FXML
@@ -76,7 +79,7 @@ public class LdifEditorController implements ILoader {
     private ComboBox<String> attributeComboBox;
 
     @FXML
-    private TextField attributeValueField;
+    private TextArea attributeValueArea;
 
     @FXML
     private Button addModificationButton;
@@ -104,10 +107,17 @@ public class LdifEditorController implements ILoader {
             public void changed(ObservableValue<? extends Connection> observable, Connection oldValue, Connection newValue) {
                 if (newValue != null) {
                     currentConnection = newValue;
+                    // Set default value for Base DN from connection
+                    if (newValue.baseDNProperty() != null && !newValue.baseDNProperty().get().isEmpty()) {
+                        baseDnField.setText(newValue.baseDNProperty().get());
+                    }
                     updateAttributeComboBox();
                 }
             }
         });
+
+        // Set up base DN field
+        baseDnField.setTooltip(new Tooltip("Starting point for LDAP search"));
 
         // Set up LDAP filter field
         ldapFilterField.setTooltip(new Tooltip("Enter LDAP filter to search for entries"));
@@ -216,7 +226,7 @@ public class LdifEditorController implements ILoader {
 
         String modificationType = modificationTypeComboBox.getValue();
         String attribute = attributeComboBox.getValue();
-        String value = attributeValueField.getText();
+        String value = attributeValueArea.getText();
 
         if (attribute == null || attribute.isEmpty()) {
             GuiHelper.ERROR("Attribute Required", "Please select or enter an attribute");
@@ -227,6 +237,21 @@ public class LdifEditorController implements ILoader {
             GuiHelper.ERROR("Value Required", "Please enter a value (except for DELETE operations)");
             return;
         }
+
+        // Get base DN for search
+        final String baseDN;
+        String tempBaseDN = baseDnField.getText();
+        if (tempBaseDN == null || tempBaseDN.isEmpty()) {
+            // If base DN is not specified, use the connection's base DN
+            if (currentConnection.baseDNProperty() != null && !currentConnection.baseDNProperty().get().isEmpty()) {
+                tempBaseDN = currentConnection.baseDNProperty().get();
+                baseDnField.setText(tempBaseDN); // Update the field
+            } else {
+                // Use empty string for root DSE if no base DN is available
+                tempBaseDN = "";
+            }
+        }
+        baseDN = tempBaseDN; // Assign to final variable
 
         // Clear existing LDIF content
         ldifTextArea.clear();
@@ -251,7 +276,7 @@ public class LdifEditorController implements ILoader {
                     // Use the unboundid API to search for entries
                     com.unboundid.ldap.sdk.SearchRequest searchRequest = 
                         new com.unboundid.ldap.sdk.SearchRequest(
-                            "", // Base DN (empty will use the connection's base DN)
+                            baseDN, // Use the base DN from the field
                             com.unboundid.ldap.sdk.SearchScope.SUB,
                             filter,
                             "dn"); // Only need the DN
@@ -459,16 +484,27 @@ public class LdifEditorController implements ILoader {
         // Get the editor from the ComboBox
         TextField editor = attributeComboBox.getEditor();
         
+        // Keep a reference to the original full list of items
+        final ObservableList<String> originalItemsList = FXCollections.observableArrayList();
+        
         // Add listener to the text property of the editor
         editor.textProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue == null || newValue.isEmpty()) {
-                attributeComboBox.hide();
+            // Save original items the first time we get them
+            if (originalItemsList.isEmpty() && attributeComboBox.getItems() != null && !attributeComboBox.getItems().isEmpty()) {
+                originalItemsList.setAll(attributeComboBox.getItems());
+            }
+            
+            // If we have no items to filter, do nothing
+            if (originalItemsList.isEmpty()) {
                 return;
             }
             
-            // Get all attributes from the ComboBox items
-            ObservableList<String> allItems = attributeComboBox.getItems();
-            if (allItems == null || allItems.isEmpty()) {
+            // If text is empty, restore all items
+            if (newValue == null || newValue.isEmpty()) {
+                attributeComboBox.setItems(originalItemsList);
+                if (!attributeComboBox.isShowing() && attributeComboBox.isFocused()) {
+                    attributeComboBox.show();
+                }
                 return;
             }
             
@@ -477,13 +513,13 @@ public class LdifEditorController implements ILoader {
             ObservableList<String> filteredItems = FXCollections.observableArrayList();
             
             // First add exact matches and then prefix matches
-            for (String item : allItems) {
+            for (String item : originalItemsList) {
                 if (item.toLowerCase().equals(lowerCaseNewValue)) {
                     filteredItems.add(item);
                 }
             }
             
-            for (String item : allItems) {
+            for (String item : originalItemsList) {
                 if (item.toLowerCase().startsWith(lowerCaseNewValue) && 
                     !filteredItems.contains(item)) {
                     filteredItems.add(item);
@@ -491,7 +527,7 @@ public class LdifEditorController implements ILoader {
             }
             
             // Add contains matches (but not at beginning)
-            for (String item : allItems) {
+            for (String item : originalItemsList) {
                 if (item.toLowerCase().contains(lowerCaseNewValue) && 
                     !item.toLowerCase().startsWith(lowerCaseNewValue) &&
                     !filteredItems.contains(item)) {
@@ -503,32 +539,79 @@ public class LdifEditorController implements ILoader {
             if (!filteredItems.isEmpty()) {
                 attributeComboBox.setItems(filteredItems);
                 
-                // Only show the dropdown if we're not in the middle of selection
-                if (!attributeComboBox.isShowing()) {
+                // Show dropdown when we have matches and the field is focused
+                if (!attributeComboBox.isShowing() && attributeComboBox.isFocused()) {
                     attributeComboBox.show();
                 }
             } else {
+                // If no matches, just restore the original list so user can browse
+                attributeComboBox.setItems(originalItemsList);
                 attributeComboBox.hide();
             }
         });
         
-        // Add key pressed event handler to handle Enter key
-        editor.setOnKeyPressed(event -> {
-            if (event.getCode() == javafx.scene.input.KeyCode.ENTER) {
-                ObservableList<String> items = attributeComboBox.getItems();
-                if (items != null && !items.isEmpty()) {
-                    // Select the first item if there are suggestions
-                    String firstMatch = items.get(0);
-                    editor.setText(firstMatch);
-                    attributeComboBox.setValue(firstMatch);
-                    attributeComboBox.hide();
-                    
-                    // Move focus to the next field (attributeValueField)
-                    attributeValueField.requestFocus();
-                    
-                    // Consume the event to prevent it from propagating
-                    event.consume();
+        // Add mouse click handler to show all items when clicking on the field
+        editor.setOnMouseClicked(event -> {
+            if (!originalItemsList.isEmpty()) {
+                attributeComboBox.setItems(originalItemsList);
+                if (!attributeComboBox.isShowing()) {
+                    attributeComboBox.show();
                 }
+            }
+        });
+        
+        // Add focus handler to show items when field gets focus
+        editor.focusedProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal && !originalItemsList.isEmpty()) {
+                // When focus is gained, show dropdown if there's text to filter, or show all if empty
+                String currentText = editor.getText();
+                if (currentText == null || currentText.isEmpty()) {
+                    attributeComboBox.setItems(originalItemsList);
+                    if (!attributeComboBox.isShowing()) {
+                        attributeComboBox.show();
+                    }
+                }
+            }
+        });
+        
+        // Add key pressed event handler to handle Enter key and backspace
+        editor.setOnKeyPressed(event -> {
+            switch (event.getCode()) {
+                case ENTER:
+                    ObservableList<String> items = attributeComboBox.getItems();
+                    if (items != null && !items.isEmpty()) {
+                        // Select the first item if there are suggestions
+                        String firstMatch = items.get(0);
+                        editor.setText(firstMatch);
+                        attributeComboBox.setValue(firstMatch);
+                        attributeComboBox.hide();
+                        
+                        // Move focus to the next field (attributeValueArea)
+                        attributeValueArea.requestFocus();
+                        
+                        // Consume the event to prevent it from propagating
+                        event.consume();
+                    }
+                    break;
+                    
+                case DELETE:
+                case BACK_SPACE:
+                    // If the user is deleting content, ensure we'll show the dropdown again
+                    if (!originalItemsList.isEmpty()) {
+                        Platform.runLater(() -> {
+                            String currentText = editor.getText();
+                            if (currentText == null || currentText.isEmpty()) {
+                                attributeComboBox.setItems(originalItemsList);
+                                if (!attributeComboBox.isShowing() && attributeComboBox.isFocused()) {
+                                    attributeComboBox.show();
+                                }
+                            }
+                        });
+                    }
+                    break;
+                    
+                default:
+                    break;
             }
         });
     }
