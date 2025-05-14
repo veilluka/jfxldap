@@ -23,10 +23,10 @@
                   <MenuItem fx:id="_exit" mnemonicParsing="false" text="Close" />
             </items>
           </Menu>
-          <Menu mnemonicParsing="false" text="Edit">
+          <Menu mnemonicParsing="false" text="LDIF Editor">
             <items>
-              <MenuItem fx:id="_editMenuItem" mnemonicParsing="false" text="Edit" />
-              <MenuItem fx:id="_ldifEditor" mnemonicParsing="false" text="LDIF Editor" />
+              <MenuItem fx:id="_addLDIFEntries" mnemonicParsing="false" text="Add LDIF Entries" />
+              <MenuItem fx:id="_ldifEditor" mnemonicParsing="false" text="Batch Modify" />
             </items>
           </Menu>
           <Menu mnemonicParsing="false" text="Help">

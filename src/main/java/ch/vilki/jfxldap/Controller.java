@@ -47,7 +47,7 @@ public class Controller implements Initializable {
     @FXML private MenuItem _settings;
     @FXML private MenuItem _exit;
     @FXML private MenuItem _ldifEditor;
-    @FXML private MenuItem _editMenuItem;
+    @FXML private MenuItem _addLDIFEntries;
     @FXML private BorderPane _mainWindow;
 
     private int counter = 0;
@@ -330,7 +330,7 @@ public class Controller implements Initializable {
             _saveProject.setDisable(true);
             _closeProject.setDisable(true);
         });
-        _editMenuItem.setOnAction(e -> openAttributeEditor());
+        _addLDIFEntries.setOnAction(e -> openAddLdifEntriesWindow());
     }
 
     /**
@@ -360,6 +360,29 @@ public class Controller implements Initializable {
             controller.show();
         } catch (java.io.IOException e) {
             GuiHelper.EXCEPTION("Error Opening LDIF Editor", "Failed to open LDIF editor", e);
+        }
+    }
+
+    /**
+     * Opens the Add LDIF Entries window
+     */
+    private void openAddLdifEntriesWindow() {
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(Main.class.getResource("/ch/vilki/jfxldap/fxml/AddLdifEntries.fxml"));
+            javafx.scene.Parent page = loader.load();
+            ch.vilki.jfxldap.gui.AddLdifEntriesController controller = loader.getController();
+            controller.setMain(Main._main);
+            controller.setWindow(page);
+            if (_primaryStage != null) {
+                controller.setOwner(_primaryStage);
+            } else if (_mainWindow.getScene() != null && _mainWindow.getScene().getWindow() instanceof javafx.stage.Stage) {
+                controller.setOwner((javafx.stage.Stage) _mainWindow.getScene().getWindow());
+            }
+            controller.setLdapExploreController(_ctManager._ldapSourceExploreCtrl);
+            controller.show();
+        } catch (java.io.IOException e) {
+            GuiHelper.EXCEPTION("Error Opening Add LDIF Entries", "Failed to open Add LDIF Entries window", e);
         }
     }
 
