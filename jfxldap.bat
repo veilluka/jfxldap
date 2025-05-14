@@ -6,7 +6,7 @@ if not defined JAVA_HOME (
     echo JAVA_HOME is not set.
     echo Please enter the path to your Java installation (e.g., C:\Program Files\Java\jdk-21):
     set /p JAVA_HOME=Enter JAVA_HOME: 
-    if not defined JAVA_HOME (
+    if "%JAVA_HOME%"=="" (
         echo No JAVA_HOME specified. Exiting.
         exit /b 1
     )
@@ -23,7 +23,7 @@ for /f "delims=" %%i in ('dir /b /a-d "jfxLDAP-*-all.jar" 2^>nul') do (
 )
 
 :found_jar
-if not defined FOUND_JAR (
+if "%FOUND_JAR%"=="" (
     echo Error: Could not find jfxLDAP-*-all.jar in the current directory
     echo Please make sure you're running this from the build\libs directory
     exit /b 1

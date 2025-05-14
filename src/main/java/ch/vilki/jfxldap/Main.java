@@ -17,7 +17,7 @@ import javafx.stage.Stage;
 import jfxtras.styles.jmetro.JMetro;
 import jfxtras.styles.jmetro.Style;
 import org.apache.logging.log4j.LogManager;
-import ch.vilki.jfxldap.ApplicationVersion;
+import ch.vilki.jfxldap.gui.AppVersion;
 
 import java.io.FileInputStream;
 import java.io.IOException;

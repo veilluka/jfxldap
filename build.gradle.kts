@@ -88,6 +88,7 @@ dependencies {
     implementation(files("lib/secured-properties-4.2.jar"))
   	implementation(kotlin("stdlib"))
     implementation("com.panemu:tiwulfx:3.4")
+    implementation(files("lib/cncKCommon.jar"))
   
 
 
