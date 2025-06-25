@@ -15,6 +15,13 @@ import com.unboundid.ldap.sdk.LDAPResult;
 import com.unboundid.ldap.sdk.ResultCode;
 import com.unboundid.ldap.sdk.BindResult;
 import javafx.application.Platform;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.nio.file.Files;
+import java.util.HashMap;
+import java.util.Map;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ChangeListener;
@@ -622,9 +629,92 @@ public class LdapExploreController implements IProgress, ILoader {
         if (selectedFile.getName().toLowerCase().endsWith(".ldif")) {
             _openedLDIFFile = selectedFile.getAbsolutePath();
             try {
-                uploadLDIFFile(selectedFile);
-            } catch (IOException | LDIFException e) {
-                GuiHelper.EXCEPTION("Error loading file", e.getMessage(), e);
+                // Show progress dialog
+                _progressStage.show();
+                
+                // Check for trailing spaces in the file
+                Map<Integer, String> linesWithTrailingSpaces = checkForTrailingSpaces(selectedFile);
+                
+                if (!linesWithTrailingSpaces.isEmpty()) {
+                    // Create a preview of the issues to show the user
+                    StringBuilder detailsBuilder = new StringBuilder();
+                    detailsBuilder.append("Found " + linesWithTrailingSpaces.size() + " lines with trailing spaces:\n\n");
+                    
+                    // Show up to 10 examples
+                    int count = 0;
+                    for (Map.Entry<Integer, String> entry : linesWithTrailingSpaces.entrySet()) {
+                        if (count++ >= 10) {
+                            detailsBuilder.append("... and " + (linesWithTrailingSpaces.size() - 10) + " more lines\n");
+                            break;
+                        }
+                        detailsBuilder.append("Line " + entry.getKey() + ": '" + entry.getValue() + "'\n");
+                    }
+                    
+                    // Hide progress temporarily to show confirmation dialog
+                    Platform.runLater(() -> {
+                        _progressStage.hide();
+                        
+                        // Ask user if they want to remove trailing spaces
+                        boolean userWantsToFix = GuiHelper.confirm(
+                            "Trailing Spaces Detected", 
+                            "Would you like to remove trailing spaces?", 
+                            detailsBuilder.toString());
+                        
+                        if (userWantsToFix) {
+                            try {
+                                _progressStage.show();
+                                // Create a clean version of the file
+                                File cleanFile = removeTrailingSpaces(selectedFile);
+                                // Upload the cleaned file instead
+                                try {
+                                    uploadLDIFFile(cleanFile);
+                                } catch (Exception ex) {
+                                    Platform.runLater(() -> {
+                                        GuiHelper.EXCEPTION("Error loading cleaned file", ex.getMessage(), ex);
+                                    });
+                                }
+                                // Inform user that a clean version was used
+                                Platform.runLater(() -> {
+                                    GuiHelper.INFO("Trailing Spaces Removed", 
+                                        "A clean version of the file was created at:\n" + 
+                                        cleanFile.getAbsolutePath());
+                                });
+                            } catch (Exception e) {
+                                Platform.runLater(() -> {
+                                    GuiHelper.EXCEPTION("Error removing trailing spaces", e.getMessage(), e);
+                                });
+                                // Fall back to loading the original file
+                                try {
+                                    uploadLDIFFile(selectedFile);
+                                } catch (Exception ex) {
+                                    Platform.runLater(() -> {
+                                        GuiHelper.EXCEPTION("Error loading file", ex.getMessage(), ex);
+                                    });
+                                }
+                            }
+                        } else {
+                            // User chose not to fix, just load the original file
+                            try {
+                                _progressStage.show();
+                                uploadLDIFFile(selectedFile);
+                            } catch (Exception e) {
+                                Platform.runLater(() -> {
+                                    GuiHelper.EXCEPTION("Error loading file", e.getMessage(), e);
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    // No trailing spaces found, proceed with normal upload
+                    try {
+                        uploadLDIFFile(selectedFile);
+                    } catch (Exception e) {
+                        GuiHelper.EXCEPTION("Error loading file", e.getMessage(), e);
+                        return;
+                    }
+                }
+            } catch (IOException e) {
+                GuiHelper.EXCEPTION("Error checking file", e.getMessage(), e);
                 return;
             }
         }
@@ -632,6 +722,90 @@ public class LdapExploreController implements IProgress, ILoader {
     }
 
 
+    /**
+     * Checks if an LDIF file has trailing spaces in any lines
+     * @param file The LDIF file to check
+     * @return Map containing line numbers with trailing spaces and the lines themselves
+     * @throws IOException If an IO error occurs
+     */
+    private Map<Integer, String> checkForTrailingSpaces(File file) throws IOException {
+        Map<Integer, String> linesWithTrailingSpaces = new HashMap<>();
+        _progressController.setProgress(0.0, "CHECKING FOR TRAILING SPACES");
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            int lineNumber = 0;
+            long totalLines = Files.lines(file.toPath()).count();
+            long linesProcessed = 0;
+            
+            while ((line = reader.readLine()) != null) {
+                lineNumber++;
+                linesProcessed++;
+                
+                // Update progress every 100 lines
+                if (linesProcessed % 100 == 0) {
+                    double progress = (double) linesProcessed / totalLines;
+                    _progressController.setProgress(progress, "CHECKING LINE " + linesProcessed + "/" + totalLines);
+                }
+                
+                // Check for trailing spaces
+                if (line.length() > 0 && line.charAt(line.length() - 1) == ' ') {
+                    linesWithTrailingSpaces.put(lineNumber, line);
+                }
+            }
+            
+            _progressController.setProgress(1.0, "TRAILING SPACE CHECK COMPLETED");
+        }
+        
+        return linesWithTrailingSpaces;
+    }
+    
+    /**
+     * Removes trailing spaces from an LDIF file
+     * @param inputFile The original LDIF file
+     * @return A new File with trailing spaces removed
+     * @throws IOException If an IO error occurs
+     */
+    private File removeTrailingSpaces(File inputFile) throws IOException {
+        _progressController.setProgress(0.0, "REMOVING TRAILING SPACES");
+        
+        // Create a temporary file
+        File outputFile = new File(inputFile.getAbsolutePath() + ".tmp");
+        
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(outputFile))) {
+            
+            String line;
+            int linesProcessed = 0;
+            long totalLines = Files.lines(inputFile.toPath()).count();
+            
+            while ((line = reader.readLine()) != null) {
+                linesProcessed++;
+                
+                // Update progress every 100 lines
+                if (linesProcessed % 100 == 0) {
+                    double progress = (double) linesProcessed / totalLines;
+                    _progressController.setProgress(progress, "REMOVING SPACES: LINE " + linesProcessed + "/" + totalLines);
+                }
+                
+                // Remove trailing spaces
+                String trimmedLine = line.replaceAll("\\s+$", "");
+                writer.write(trimmedLine);
+                writer.newLine();
+            }
+            
+            _progressController.setProgress(1.0, "TRAILING SPACES REMOVED");
+        }
+        
+        // Create a new file with .ldif extension
+        String originalPath = inputFile.getAbsolutePath();
+        String pathWithoutExtension = originalPath.substring(0, originalPath.lastIndexOf("."));
+        File cleanFile = new File(pathWithoutExtension + "_clean.ldif");
+        outputFile.renameTo(cleanFile);
+        
+        return cleanFile;
+    }
+    
     public void uploadLDIFFile(File selectedFile) throws IOException, LDIFException {
         _progressStage.show();
         _progressController.setProgress(0.0,"LOADING FILE NOW");
@@ -681,53 +855,86 @@ public class LdapExploreController implements IProgress, ILoader {
         _executor.submit(() -> {
             int nrOfEntriesDone = 0;
             AtomicInteger atomicInteger = new AtomicInteger();
-            while (true) {
-                Entry entry = null;
-                try {
-                    entry = _ldifReader.readEntry();
-                    if (entry == null)
-                    {
-                        _progressController.setProgress(1.0,"READ DONE, BUILD TREE NOW...");
+            List<String> errors = new ArrayList<>();
+            try {
+                while (true) {
+                    Entry entry = null;
+                    try {
+                        entry = _ldifReader.readEntry();
+                    } catch (Exception e) {
+                        errors.add(e.getMessage());
+                        logger.error("Error reading LDIF file", e);
+                        // Continue to next entry
+                        continue;
+                    }
+
+                    if (entry == null) {
+                        _progressController.setProgress(1.0, "READ DONE, BUILD TREE NOW...");
                         break;
                     }
-                    cc.refreshEntry(entry);
-                    addEntriesFromLdif(_treeView.getRoot(), entry, entry.getDN());
-                    entry.getAttributes().forEach(x -> foundAttributes.add(x.getName()));
-                    nrOfEntriesDone++;
-                    if (nrOfEntriesDone % 100 == 0) {
-                        if (_breakFileLoad)
-                        {
-                            Platform.runLater(()->{
-                                _treeView.setRoot(null);
-                                _progressStage.hide();
-                            });
-                            _ldifReader = null;
-                            return;
-                        }
-                        String dn = entry.getDN();
-                        final String entriesDone = String.valueOf(nrOfEntriesDone);
-                        Platform.runLater(() -> _progressController.setProgress((double) (atomicInteger.incrementAndGet() %100)  / 100.0, "Entries read->" + entriesDone));
-                    }
-                } catch (Exception e) {
-                    _progressStage.hide();
-                    String dn = entry.getDN();
-                    Platform.runLater(() -> GuiHelper.EXCEPTION("Error Loading Entry", dn, e));
+                    
                     try {
+                        cc.refreshEntry(entry);
+                        addEntriesFromLdif(_treeView.getRoot(), entry, entry.getDN());
+                        entry.getAttributes().forEach(x -> foundAttributes.add(x.getName()));
+                        nrOfEntriesDone++;
+                        if (nrOfEntriesDone % 100 == 0) {
+                            if (_breakFileLoad) {
+                                Platform.runLater(() -> {
+                                    _treeView.setRoot(null);
+                                    _progressStage.hide();
+                                });
+                                _ldifReader = null;
+                                return;
+                            }
+                            final String entriesDone = String.valueOf(nrOfEntriesDone);
+                            Platform.runLater(() -> _progressController.setProgress((double) (atomicInteger.incrementAndGet() %100) / 100.0, "Entries read->" + entriesDone));
+                        }
+                    } catch (Exception e) {
+                        errors.add("Error processing entry: " + e.getMessage());
+                        logger.error("Error processing LDIF entry", e);
+                    }
+                }
+            } catch (Exception e) {
+                // Handle any unexpected exceptions in the main loop
+                _progressStage.hide();
+                Platform.runLater(() -> GuiHelper.EXCEPTION("Error Loading LDIF", "Unexpected error in LDIF processing", e));
+                logger.error("Unexpected error in LDIF processing", e);
+            } finally {
+                // Make sure the LDIF reader is closed
+                try {
+                    if (_ldifReader != null) {
                         _ldifReader.close();
-                    } catch (Exception e1) {
                         _ldifReader = null;
                     }
-                    _ldifReader = null;
-                    logger.error(e);
+                } catch (Exception e) {
+                    logger.error("Error closing LDIF reader", e);
                 }
+                
+                // Show errors at the end if any
+                if (!errors.isEmpty()) {
+                    final List<String> finalErrors = new ArrayList<>(errors);
+                    Platform.runLater(() -> {
+                        StringBuilder errorDetails = new StringBuilder();
+                        errorDetails.append("The following errors occurred while reading LDIF file:\n\n");
+                        for (String error : finalErrors) {
+                            errorDetails.append("• ").append(error).append("\n");
+                        }
+                        GuiHelper.ERROR_DETAILED("LDIF Reading Errors", 
+                                               "Completed with " + finalErrors.size() + " errors", 
+                                               errorDetails.toString());
+                    });
+                }
+                
+                // Final UI updates
+                Platform.runLater(() -> {
+                    setIcons(_treeView.getRoot());
+                    _progressStage.hide();
+                    setFileMode(true);
+                    expand(_treeView.getRoot());
+                    _treeView.refresh();
+                });
             }
-            Platform.runLater(() -> {
-                setIcons(_treeView.getRoot());
-                _progressStage.hide();
-                setFileMode(true);
-                expand(_treeView.getRoot());
-                _treeView.refresh();
-            });
 
         });
         cc.setSchemaAttributes(foundAttributes.stream().collect(Collectors.toList()));
