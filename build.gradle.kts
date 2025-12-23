@@ -88,7 +88,7 @@ dependencies {
     implementation(files("lib/secured-properties-4.2.jar"))
   	implementation(kotlin("stdlib"))
     implementation("com.panemu:tiwulfx:3.4")
-    implementation(files("lib/cncKCommon.jar"))
+    // implementation(files("lib/cncKCommon.jar"))  // Optional: Comment out if file doesn't exist
   
 
 
@@ -368,7 +368,6 @@ tasks.register<Exec>("createStandaloneExe") {
         "--icon", "${projectDir}/src/main/resources/ch/vilki/jfxldap/icons/ldapTree.png",
         "--java-options", "-Djava.library.path=\"\$APPDIR/app\"",
         "--win-console",         // Keep console for command-line support
-        "--win-shortcut",
         "--verbose"
     )
     
@@ -421,5 +420,59 @@ tasks.register<Exec>("createStandaloneInstaller") {
     doLast {
         println("Standalone installer created at: $outputDir/$appName-$appVersion.exe")
         println("This installer creates an application that does NOT require Java to be installed")
+    }
+}
+
+// Consolidated task to build Windows executable (recommended)
+tasks.register("buildWindowsExe") {
+    group = "distribution"
+    description = "Creates a standalone Windows executable with bundled JRE (no Java installation required)"
+    
+    dependsOn("createStandaloneExe")
+    
+    doLast {
+        val outputDir = "${layout.buildDirectory.get()}/standalone-exe"
+        val appName = "jfxLDAP"
+        println("")
+        println("═══════════════════════════════════════════════════════════════")
+        println("✓ Windows Executable Build Complete!")
+        println("═══════════════════════════════════════════════════════════════")
+        println("")
+        println("Location: $outputDir/$appName/")
+        println("")
+        println("The application is ready to distribute. Users can:")
+        println("  • Run $appName.exe directly (no Java required)")
+        println("  • Copy the entire folder to any Windows machine")
+        println("  • JRE is bundled - fully self-contained")
+        println("")
+        println("═══════════════════════════════════════════════════════════════")
+    }
+}
+
+// Alternative task to build Windows installer
+tasks.register("buildWindowsInstaller") {
+    group = "distribution"
+    description = "Creates a Windows installer (.exe) with bundled JRE"
+    
+    dependsOn("createStandaloneInstaller")
+    
+    doLast {
+        val outputDir = "${layout.buildDirectory.get()}/standalone-installer"
+        val appVersion = project.version.toString()
+        val appName = "jfxLDAP"
+        println("")
+        println("═══════════════════════════════════════════════════════════════")
+        println("✓ Windows Installer Build Complete!")
+        println("═══════════════════════════════════════════════════════════════")
+        println("")
+        println("Installer: $outputDir/$appName-$appVersion.exe")
+        println("")
+        println("Users can run the installer to:")
+        println("  • Install the application to Program Files")
+        println("  • Create Start Menu shortcuts")
+        println("  • Choose installation directory")
+        println("  • No Java installation required")
+        println("")
+        println("═══════════════════════════════════════════════════════════════")
     }
 }

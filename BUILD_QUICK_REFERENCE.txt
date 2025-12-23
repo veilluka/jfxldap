@@ -1,0 +1,83 @@
+═══════════════════════════════════════════════════════════════
+jfxLDAP - Windows Build Quick Reference
+═══════════════════════════════════════════════════════════════
+
+MOST COMMON COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Build Standalone Executable (Recommended)
+  .\gradlew.bat buildWindowsExe
+  
+  Output: build\standalone-exe\jfxLDAP\jfxLDAP.exe
+  Size: ~200 MB (includes JRE)
+  Requirements: None (fully self-contained)
+
+Build Windows Installer
+  .\gradlew.bat buildWindowsInstaller
+  
+  Output: build\standalone-installer\jfxLDAP-5.0.0.exe
+  Size: ~220 MB
+  Creates: Full Windows installer with Start Menu shortcuts
+
+Build Fat JAR (Requires Java)
+  .\gradlew.bat fatJar
+  
+  Output: build\libs\jfxLDAP-5.0.0-all.jar
+  Size: ~80 MB
+  Requires: Java 21 installed on target machine
+  Run: java -jar jfxLDAP-5.0.0-all.jar
+
+
+DEVELOPMENT COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Build project
+  .\gradlew.bat build
+
+Run application
+  .\gradlew.bat run
+
+Clean build directory
+  .\gradlew.bat clean
+
+Install locally (to location in gradle.properties)
+  .\gradlew.bat install_local
+
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Build fails? Try:
+  .\gradlew.bat clean buildWindowsExe
+
+Application running? Kill it first:
+  taskkill /F /IM jfxLDAP.exe
+
+Check Java version (need JDK 21):
+  java -version
+
+View all available tasks:
+  .\gradlew.bat tasks --all
+
+
+OUTPUT LOCATIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Standalone Executable:  build\standalone-exe\jfxLDAP\
+Installer:              build\standalone-installer\
+Fat JAR:                build\libs\
+Distribution Zip:       build\distributions\
+
+
+DETAILED DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For complete instructions, troubleshooting, and customization:
+  See BUILD_WINDOWS.md
+
+For developer documentation:
+  See WARP.md
+
+═══════════════════════════════════════════════════════════════
+Version 5.0.0 | Last Updated: December 2025
+═══════════════════════════════════════════════════════════════

@@ -20,6 +20,23 @@ GUI with docked windows.
 
 
 
+== BUILDING
+
+=== Quick Build
+
+To build a Windows executable with bundled JRE:
+
+[source,powershell]
+----
+.\gradlew.bat buildWindowsExe
+----
+
+Output: `build/standalone-exe/jfxLDAP/jfxLDAP.exe`
+
+For detailed build instructions, see link:BUILD_WINDOWS.md[BUILD_WINDOWS.md]
+
+
+
 == FEATURES
 
 
