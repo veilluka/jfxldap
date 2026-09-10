@@ -23,7 +23,7 @@ import javafx.stage.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.awt.*;
+import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -71,6 +71,7 @@ public class SettingsController implements ILoader {
     @FXML TableColumn<Connection, String> _tableColumnPassword;
     @FXML TableColumn<Connection, String> _tableColumnBaseDN;
 
+    @FXML Label _labelUserDN;
     @FXML TextField _textFieldConnectionName;
     @FXML TextField _textFieldTAG;
     @FXML TextField _textFieldServer;
@@ -105,6 +106,7 @@ public class SettingsController implements ILoader {
     @FXML CheckBox _checkBoxJNDIReader;
     @FXML CheckBox _checkBoxReadOnly;
     @FXML CheckBox _checkBoxUseSSL;
+    @FXML CheckBox _checkBoxUseGSSAPI;
 
     @FXML TabPane _tabPane;
     Tab _keyStoreTab = null;
@@ -160,24 +162,11 @@ public class SettingsController implements ILoader {
             autoResizeColumns(_tableViewConnections);
             _main._ctManager._keyStoreController.initWindow();
         });
-        _tableColumnUser.setCellFactory(tc -> {
-            TableCell<Connection, String> cell = new TableCell<>();
-            Text text = new Text();
-            cell.setGraphic(text);
-            cell.setPrefHeight(Control.USE_COMPUTED_SIZE);
-            text.wrappingWidthProperty().bind(tc.widthProperty());
-            text.textProperty().bind(cell.itemProperty());
-            return cell;
-        });
         _tableViewConnections.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        _tableColumnName.setPrefWidth(1f * Integer.MAX_VALUE * 15);
-        _tableColumnServer.setPrefWidth(1f * Integer.MAX_VALUE * 10);
-        _tableColumnPort.setPrefWidth(1f * Integer.MAX_VALUE * 5);
-        _tableColumnUser.setPrefWidth(1f * Integer.MAX_VALUE * 30);
-        _tableColumnBaseDN.setPrefWidth(1f * Integer.MAX_VALUE * 30);
-        _tableColumnPassword.setPrefWidth(1f * Integer.MAX_VALUE * 10);
+        _tableColumnName.setPrefWidth(150);
+        _tableColumnTag.setPrefWidth(100);
 
-        _tableColumnUser.resizableProperty().addListener(x -> {
+        _tableColumnName.resizableProperty().addListener(x -> {
             autoResizeColumns(_tableViewConnections);
         });
 
@@ -238,6 +227,20 @@ public class SettingsController implements ILoader {
         _buttonSaveConnections.setDisable(true);
         _buttonDeleteConnection.setDisable(true);
         _buttonGetCertificatesFromServer.setDisable(true);
+        updateAuthModeUi();
+        _checkBoxUseGSSAPI.selectedProperty().addListener((obs, oldVal, newVal) -> updateAuthModeUi());
+    }
+
+    /**
+     * When GSS-API (Kerberos) is selected, the "User DN" field contains the
+     * Kerberos principal (e.g. user@REALM or UPN), not an LDAP DN. Adjust the
+     * label and the password field hint accordingly.
+     */
+    private void updateAuthModeUi() {
+        boolean gssapi = _checkBoxUseGSSAPI.isSelected();
+        _labelUserDN.setText(gssapi ? "User (Kerberos):" : "User DN:");
+        _textFieldUser.setPromptText(gssapi ? "user@DOMAIN.COM" : "");
+        _passwordFieldConnection.setPromptText(gssapi ? "empty = current Kerberos ticket" : "");
     }
 
     private void initButtons() {
@@ -554,6 +557,7 @@ public class SettingsController implements ILoader {
                 _passwordFieldConnection.setText(connection.getPassword());
                 _checkBoxJNDIReader.setSelected(connection.isUseJNDI());
                 _checkBoxUseSSL.setSelected(connection.isSSL());
+                _checkBoxUseGSSAPI.setSelected(connection.isGSSAPI());
                 _checkBoxReadOnly.setSelected(connection.is_readOnly());
                 _textFieldConnectionName.setDisable(false);
                 _textFieldServer.setDisable(false);
@@ -581,11 +585,12 @@ public class SettingsController implements ILoader {
         _tableColumnName.setCellValueFactory(new PropertyValueFactory<>("Name"));
         _tableColumnTag.setCellValueFactory(new PropertyValueFactory<>("Tag"));
         _tableColumnName.setEditable(true);
-        _tableColumnServer.setCellValueFactory(new PropertyValueFactory<Connection, String>("Server"));
-        _tableColumnPort.setCellValueFactory(new PropertyValueFactory<Connection, String>("Port"));
-        _tableColumnUser.setCellValueFactory(new PropertyValueFactory<Connection, String>("User"));
-        _tableColumnPassword.setCellValueFactory(new PropertyValueFactory<Connection, String>("Password"));
-        _tableColumnBaseDN.setCellValueFactory(new PropertyValueFactory<Connection, String>("BaseDN"));
+        // These columns are no longer present in the simplified table view
+        // _tableColumnServer.setCellValueFactory(new PropertyValueFactory<Connection, String>("Server"));
+        // _tableColumnPort.setCellValueFactory(new PropertyValueFactory<Connection, String>("Port"));
+        // _tableColumnUser.setCellValueFactory(new PropertyValueFactory<Connection, String>("User"));
+        // _tableColumnPassword.setCellValueFactory(new PropertyValueFactory<Connection, String>("Password"));
+        // _tableColumnBaseDN.setCellValueFactory(new PropertyValueFactory<Connection, String>("BaseDN"));
         _tableViewConnections.setItems(_connectionObservableList);
     }
 
@@ -608,6 +613,7 @@ public class SettingsController implements ILoader {
         c.setUseJNDI(_checkBoxJNDIReader.isSelected());
         c.set_readOnly(_checkBoxReadOnly.isSelected());
         c.setSSL(_checkBoxUseSSL.isSelected());
+        c.setGSSAPI(_checkBoxUseGSSAPI.isSelected());
         ObservableList<Connection> connections = FXCollections.observableArrayList();
         for (Connection old : _connectionObservableList) {
 
@@ -708,8 +714,10 @@ public class SettingsController implements ILoader {
         stringBuilder.append("Password;");
         stringBuilder.append("BaseDN;");
         stringBuilder.append("DisplayAttribute;");
-        stringBuilder.append("UseJNDI");
-        stringBuilder.append("ReadOnly");
+        stringBuilder.append("UseJNDI;");
+        stringBuilder.append("ReadOnly;");
+        stringBuilder.append("SSL;");
+        stringBuilder.append("GSSAPI");
         retValue[0] = stringBuilder.toString();
         stringBuilder = new StringBuilder();
         stringBuilder.append(connection.getName());
@@ -742,6 +750,10 @@ public class SettingsController implements ILoader {
         stringBuilder.append(connection.isUseJNDI());
         stringBuilder.append(";");
         stringBuilder.append(connection.is_readOnly());
+        stringBuilder.append(";");
+        stringBuilder.append(connection.isSSL());
+        stringBuilder.append(";");
+        stringBuilder.append(connection.isGSSAPI());
         retValue[1] = stringBuilder.toString();
         return retValue;
     }

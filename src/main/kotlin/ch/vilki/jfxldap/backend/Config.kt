@@ -271,6 +271,8 @@ class Config {
                 true else connection.is_readOnly = false
             if (map["ssl"] != null && map["ssl"].equals("true", ignoreCase = true)) connection.isSSL =
                 true else connection.isSSL = false
+            if (map["gssapi"] != null && map["gssapi"].equals("true", ignoreCase = true)) connection.isGSSAPI =
+                true else connection.isGSSAPI = false
             _connections[connection.name] = connection
         }
     }
@@ -293,6 +295,7 @@ class Config {
                 _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
                 _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
                 _secStorage!!.addUnsecuredProperty(label + "ssl", con.isSSL.toString())
+                _secStorage!!.addUnsecuredProperty(label + "gssapi", con.isGSSAPI.toString())
                 _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
             }
         } catch (e: Exception) {
@@ -320,7 +323,8 @@ class Config {
         _secStorage!!.addUnsecuredProperty(label + "displayattribute", con.displayAttribute)
         _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
         _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
-        _secStorage!!.addUnsecuredProperty(label + "readonly", con.isSSL.toString())
+        _secStorage!!.addUnsecuredProperty(label + "ssl", con.isSSL.toString())
+        _secStorage!!.addUnsecuredProperty(label + "gssapi", con.isGSSAPI.toString())
         _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
     }
 

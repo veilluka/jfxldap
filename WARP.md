@@ -47,7 +47,11 @@ java -jar jfxLDAP-<version>-all.jar
 # Install to local development directory (defined in gradle.properties)
 .\gradlew.bat install_local
 
-# Create Windows executables
+# Create Windows executables (RECOMMENDED - see BUILD_WINDOWS.md for details)
+.\gradlew.bat buildWindowsExe            # Standalone exe with bundled JRE
+.\gradlew.bat buildWindowsInstaller      # Windows installer with bundled JRE
+
+# Legacy/Alternative Windows build tasks
 .\gradlew.bat createWindowsExe           # App image
 .\gradlew.bat createWindowsInstaller     # Full installer
 .\gradlew.bat createStandaloneExe        # Standalone with bundled JRE
@@ -56,6 +60,8 @@ java -jar jfxLDAP-<version>-all.jar
 # Create distributable zip
 .\gradlew.bat zipWindowsApplication
 ```
+
+**For complete Windows build instructions, see [BUILD_WINDOWS.md](BUILD_WINDOWS.md)**
 
 #### jlink Packaging
 ```powershell

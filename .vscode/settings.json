@@ -1,6 +1,13 @@
 {
     "java.compile.nullAnalysis.mode": "automatic",
     "java.configuration.updateBuildConfiguration": "automatic",
+    "java.configuration.runtimes": [
+        {
+            "name": "JavaSE-21",
+            "path": "C:/data/software/openlogic-openjdk-21.0.9+10-windows-x64",
+            "default": true
+        }
+    ],
     "java.import.gradle.enabled": true,
     "java.import.gradle.wrapper.enabled": true,
     "java.project.sourcePaths": [
@@ -14,5 +21,4 @@
     "kotlin.languageServer.enabled": true,
     "kotlin.debugAdapter.enabled": true,
     "kotlin.completion.snippets.enabled": true
-    
 }

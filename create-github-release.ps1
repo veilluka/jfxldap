@@ -6,16 +6,24 @@ $ErrorActionPreference = "Stop"
 # Configuration
 $owner = "veilluka"
 $repo = "jfxldap"
-$version = "5.0.0"
+$version = "5.2.0"
 $tag = "v$version"
 $releaseName = "jfxLDAP $version"
 $zipFile = "build\jfxLDAP-$version-windows-portable.zip"
 
 # Check if zip file exists
 if (-not (Test-Path $zipFile)) {
-    Write-Error "Zip file not found: $zipFile"
-    Write-Host "Please run: .\gradlew.bat buildWindowsExe first"
-    exit 1
+    Write-Host "Zip file not found: $zipFile" -ForegroundColor Yellow
+
+    # The Gradle build produces the standalone exe folder; try to package it as a portable zip
+    $standaloneDir = "build\standalone-exe\jfxLDAP"
+    if (Test-Path $standaloneDir) {
+        Write-Host "Creating portable zip from $standaloneDir ..." -ForegroundColor Cyan
+        Compress-Archive -Path "$standaloneDir\*" -DestinationPath $zipFile -CompressionLevel Optimal -Force
+    } else {
+        Write-Error "Standalone build not found. Please run: .\gradlew.bat buildWindowsExe first"
+        exit 1
+    }
 }
 
 # Get file size for display
@@ -27,9 +35,10 @@ $body = @"
 # jfxLDAP v$version - Windows Portable Release
 
 ## What's New
-- Enhanced build system for easy Windows executable creation
-- Comprehensive build documentation
-- Improved distribution workflow
+- **GSS-API (Kerberos) authentication support** - Connect to Active Directory / AD LDS using Kerberos, including GSS-API over LDAPS; empty password uses current Windows/Kerberos ticket
+- **Modernized Settings window** - New cleaner left-right layout with grouped connection details and dynamic "User (Kerberos)" field for GSS-API connections
+- **Fixed CSV export** - Correct header formatting and new SSL/GSS-API columns
+- Improved control state handling when adding/editing connections
 
 ## Download
 

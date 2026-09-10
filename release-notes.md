@@ -1,14 +1,15 @@
-# jfxLDAP v5.0.0 - Windows Portable Release
+# jfxLDAP v5.2.0 - Windows Portable Release
 
 ## What's New
-- Enhanced build system for easy Windows executable creation
-- Comprehensive build documentation
-- Improved distribution workflow
+- **GSS-API (Kerberos) authentication support** - Connect to Active Directory / AD LDS using Kerberos, including GSS-API over LDAPS; empty password uses current Windows/Kerberos ticket
+- **Modernized Settings window** - New cleaner left-right layout with grouped connection details and dynamic "User (Kerberos)" field for GSS-API connections
+- **Fixed CSV export** - Correct header formatting and new SSL/GSS-API columns
+- Improved control state handling when adding/editing connections
 
 ## Download
 
 ### 📦 Windows Portable Edition (Recommended)
-- **File:** `jfxLDAP-5.0.0-windows-portable.zip` (130.26 MB)
+- **File:** `jfxLDAP-5.2.0-windows-portable.zip` (130.34 MB)
 - **Requirements:** None - Java Runtime is included
 - **Installation:** 
   1. Download and extract the zip file

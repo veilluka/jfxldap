@@ -4,6 +4,7 @@ package ch.vilki.jfxldap.backend;
 import ch.vilki.secured.SecureString;
 import com.unboundid.ldap.sdk.*;
 import com.unboundid.ldap.sdk.controls.SubtreeDeleteRequestControl;
+import com.unboundid.ldap.sdk.extensions.StartTLSExtendedRequest;
 import com.unboundid.ldap.sdk.schema.AttributeTypeDefinition;
 import com.unboundid.ldap.sdk.schema.Schema;
 import com.unboundid.ldif.LDIFException;
@@ -129,6 +130,11 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
     public SimpleBooleanProperty getSSLProperty() {return UseSSL;}
     public void setSSL(boolean ssl) {this.UseSSL.set(ssl);}
 
+    SimpleBooleanProperty UseGSSAPI;
+    public boolean isGSSAPI() {return UseGSSAPI.get();}
+    public SimpleBooleanProperty useGSSAPIProperty() {return UseGSSAPI;}
+    public void setGSSAPI(boolean gssapi) {this.UseGSSAPI.set(gssapi);}
+
     private  SimpleSetProperty<AttributeTypeDefinition> AttributeDefinition;
     public ObservableSet<AttributeTypeDefinition> getAttributeDefinition() {return AttributeDefinition.get();}
     public SimpleSetProperty<AttributeTypeDefinition> attributeDefinitionProperty() {return AttributeDefinition;}
@@ -240,6 +246,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         this.Vendor = new SimpleStringProperty();
         this.UseJNDI = new SimpleBooleanProperty();
         this.UseSSL = new SimpleBooleanProperty();
+        this.UseGSSAPI = new SimpleBooleanProperty();
         this.SchemaAttributes = new  SimpleListProperty<>(FXCollections.observableArrayList());
         this.Tag = new SimpleStringProperty(tag);
         _foundSchemaAttributes.clear();
@@ -261,6 +268,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         c._foundSchemaAttributes.addAll(this._foundSchemaAttributes);
         c.set_readOnly(this.is_readOnly());
         c.setSSL(this.isSSL());
+        c.setGSSAPI(this.isGSSAPI());
 
         return c;
     }
@@ -326,6 +334,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         this.UseJNDI = new SimpleBooleanProperty(false);
         this.SchemaAttributes = new SimpleListProperty<>(FXCollections.observableArrayList());
         this.UseSSL = new SimpleBooleanProperty(false);
+        this.UseGSSAPI = new SimpleBooleanProperty(false);
         this.Tag = new SimpleStringProperty();
         _foundSchemaAttributes.clear();
     }
@@ -418,7 +427,16 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
             c = new LDAPConnection();
         }
         c.connect(Server.get(),getPortNumber());
-        BindResult bindResult = c.bind(User.get(),Password.get());
+
+        BindResult bindResult;
+        if (UseGSSAPI.get()) {
+            GSSAPIBindRequestProperties gssapiProperties = new GSSAPIBindRequestProperties(User.get(), Password.get());
+            GSSAPIBindRequest bindRequest = new GSSAPIBindRequest(gssapiProperties);
+            bindResult = c.bind(bindRequest);
+        } else {
+            bindResult = c.bind(User.get(), Password.get());
+        }
+
         if(bindResult.getResultCode().equals(ResultCode.SUCCESS))
         {
             _rootDSE = c.getRootDSE();
@@ -514,23 +532,29 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
 
     public void connect(SecureString password) throws LDAPException, GeneralSecurityException {
         LDAPConnection c = null;
-        if(UseSSL.getValue()){
-            if(UseSSL.get())
-            {
-                if(_config == null || _config.get_keyStore() == null)
-                    throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
-                            "no key store provided");
-                SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
-                c = new LDAPConnection(sslSocketFactory);
-            }
-            else
-            {
-                c = new LDAPConnection();
-            }
+        if(UseSSL.get())
+        {
+            if(_config == null || _config.get_keyStore() == null)
+                throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
+                        "no key store provided");
+            SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
+            c = new LDAPConnection(sslSocketFactory);
         }
-        else c = new LDAPConnection();
+        else
+        {
+            c = new LDAPConnection();
+        }
         c.connect(Server.get(),getPortNumber());
-        BindResult bindResult = c.bind(User.get(),password.toString());
+
+        BindResult bindResult;
+        if (UseGSSAPI.get()) {
+            GSSAPIBindRequestProperties gssapiProperties = new GSSAPIBindRequestProperties(User.get(), password.toString());
+            GSSAPIBindRequest bindRequest = new GSSAPIBindRequest(gssapiProperties);
+            bindResult = c.bind(bindRequest);
+        } else {
+            bindResult = c.bind(User.get(), password.toString());
+        }
+
         if(bindResult.getResultCode().equals(ResultCode.SUCCESS))
         {
             _rootDSE = c.getRootDSE();
