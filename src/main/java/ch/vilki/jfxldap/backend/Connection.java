@@ -130,6 +130,15 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
     public SimpleBooleanProperty getSSLProperty() {return UseSSL;}
     public void setSSL(boolean ssl) {this.UseSSL.set(ssl);}
 
+    /**
+     * When enabled the SSL connection will trust every server certificate without validating it
+     * against the keystore. This is intended for testing purposes only and is insecure.
+     */
+    SimpleBooleanProperty AcceptAllCertificates;
+    public boolean isAcceptAllCertificates() {return AcceptAllCertificates.get();}
+    public SimpleBooleanProperty acceptAllCertificatesProperty() {return AcceptAllCertificates;}
+    public void setAcceptAllCertificates(boolean acceptAll) {this.AcceptAllCertificates.set(acceptAll);}
+
     SimpleBooleanProperty UseGSSAPI;
     public boolean isGSSAPI() {return UseGSSAPI.get();}
     public SimpleBooleanProperty useGSSAPIProperty() {return UseGSSAPI;}
@@ -246,6 +255,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         this.Vendor = new SimpleStringProperty();
         this.UseJNDI = new SimpleBooleanProperty();
         this.UseSSL = new SimpleBooleanProperty();
+        this.AcceptAllCertificates = new SimpleBooleanProperty(false);
         this.UseGSSAPI = new SimpleBooleanProperty();
         this.SchemaAttributes = new  SimpleListProperty<>(FXCollections.observableArrayList());
         this.Tag = new SimpleStringProperty(tag);
@@ -268,6 +278,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         c._foundSchemaAttributes.addAll(this._foundSchemaAttributes);
         c.set_readOnly(this.is_readOnly());
         c.setSSL(this.isSSL());
+        c.setAcceptAllCertificates(this.isAcceptAllCertificates());
         c.setGSSAPI(this.isGSSAPI());
 
         return c;
@@ -334,6 +345,7 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         this.UseJNDI = new SimpleBooleanProperty(false);
         this.SchemaAttributes = new SimpleListProperty<>(FXCollections.observableArrayList());
         this.UseSSL = new SimpleBooleanProperty(false);
+        this.AcceptAllCertificates = new SimpleBooleanProperty(false);
         this.UseGSSAPI = new SimpleBooleanProperty(false);
         this.Tag = new SimpleStringProperty();
         _foundSchemaAttributes.clear();
@@ -412,29 +424,19 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
     }
 
     public void connect() throws LDAPException, GeneralSecurityException {
+        connectInternal(Password.get());
+    }
 
-        LDAPConnection c = null;
-        if(UseSSL.get())
-        {
-           if(_config == null || _config.get_keyStore() == null)
-               throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
-                   "no key store provided");
-           SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
-           c = new LDAPConnection(sslSocketFactory);
-        }
-        else
-        {
-            c = new LDAPConnection();
-        }
-        c.connect(Server.get(),getPortNumber());
+    private void connectInternal(String password) throws LDAPException, GeneralSecurityException {
+        LDAPConnection c = createAndConnect(password);
 
         BindResult bindResult;
         if (UseGSSAPI.get()) {
-            GSSAPIBindRequestProperties gssapiProperties = new GSSAPIBindRequestProperties(User.get(), Password.get());
+            GSSAPIBindRequestProperties gssapiProperties = new GSSAPIBindRequestProperties(User.get(), password);
             GSSAPIBindRequest bindRequest = new GSSAPIBindRequest(gssapiProperties);
             bindResult = c.bind(bindRequest);
         } else {
-            bindResult = c.bind(User.get(), Password.get());
+            bindResult = c.bind(User.get(), password);
         }
 
         if(bindResult.getResultCode().equals(ResultCode.SUCCESS))
@@ -461,7 +463,81 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         }
     }
 
+    /**
+     * Establishes the physical LDAP connection. When SSL is used and the server certificate is not
+     * yet trusted by the keystore, and auto-import of certificates is enabled, the server
+     * certificate is downloaded, stored in the keystore and the connection is retried once.
+     */
+    private LDAPConnection createAndConnect(String password) throws GeneralSecurityException, LDAPException {
+        if(UseSSL.get() && !isAcceptAllCertificates() && (_config == null || _config.get_keyStore() == null))
+            throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
+                    "no key store provided");
+        LDAPConnection c = createConnection();
+        try {
+            c.connect(Server.get(),getPortNumber());
+        } catch (LDAPException e) {
+            if(UseSSL.get() && !isAcceptAllCertificates() && isCertificateError(e)
+                    && _config != null && _config.get_keyStore() != null && _config.is_autoImportCertificates())
+            {
+                logger.info("SSL certificate is not trusted, trying to import the server certificate and reconnect");
+                try { c.close(); } catch (Exception ignore) {}
+                int imported;
+                try {
+                    imported = importServerCertificates(password);
+                } catch (IOException ioe) {
+                    throw new LDAPException(ResultCode.CONNECT_ERROR,
+                            "SSL server certificate could not be imported: " + ioe.getMessage(), ioe);
+                }
+                if(imported <= 0) throw e;
+                c = createConnection();
+                c.connect(Server.get(),getPortNumber());
+            }
+            else throw e;
+        }
+        return c;
+    }
+
+    private LDAPConnection createConnection() throws GeneralSecurityException {
+        if(UseSSL.get()) return new LDAPConnection(getSSLSocketFactory());
+        return new LDAPConnection();
+    }
+
+    /**
+     * Downloads the certificates presented by the server and stores the ones missing from the
+     * keystore.
+     *
+     * @return the number of certificates that were newly added to the keystore
+     */
+    public int importServerCertificates(String password) throws GeneralSecurityException, IOException, LDAPException {
+        if(_config == null) return 0;
+        Set<X509Certificate> certificates = getCertificates(password);
+        return _config.addCertificatesToKeyStore(certificates);
+    }
+
+    /**
+     * Walks the exception cause chain to detect certificate/SSL validation failures which could be
+     * resolved by trusting the server certificate.
+     */
+    public static boolean isCertificateError(Throwable t) {
+        Throwable current = t;
+        while (current != null) {
+            if (current instanceof javax.net.ssl.SSLException) return true;
+            if (current instanceof java.security.cert.CertificateException) return true;
+            String className = current.getClass().getName();
+            if (className.contains("SunCertPathBuilderException")
+                    || className.contains("CertPathValidatorException")
+                    || className.contains("CertPathBuilderException")) return true;
+            current = current.getCause();
+        }
+        return false;
+    }
+
     private SSLSocketFactory getSSLSocketFactory() throws GeneralSecurityException {
+        if(isAcceptAllCertificates())
+        {
+            SSLUtil sslUtil = new SSLUtil(new TrustAllTrustManager());
+            return sslUtil.createSSLSocketFactory();
+        }
         TrustManagerFactory tmf = TrustManagerFactory.getInstance("X509");
         tmf.init(_config.get_keyStore());
         SSLUtil sslUtil = new SSLUtil(tmf.getTrustManagers());
@@ -508,6 +584,10 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
      */
 
     public Set<X509Certificate> getCertificates() throws GeneralSecurityException, IOException, LDAPException {
+        return getCertificates(Password.get());
+    }
+
+    public Set<X509Certificate> getCertificates(String password) throws GeneralSecurityException, IOException, LDAPException {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
         KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
         trustStore.load(null);
@@ -515,68 +595,32 @@ public  class Connection implements  java.io.Serializable, Comparable<Connection
         SSLUtil sslUtil = new SSLUtil(trustAllTrustManager);
         SSLSocketFactory socketFactory = sslUtil.createSSLSocketFactory();
         LDAPConnection connection = new LDAPConnection(socketFactory);
-        connection.connect(getServer(),getPortNumber());
-        connection.bind(getUser(),Password.get());
-        SSLSession sslSession = connection.getSSLSession();
-        Certificate[] certs =   sslSession.getPeerCertificates();
-        Set<X509Certificate> certificates = new HashSet<>();
-        for(Certificate certificate: certs)
-        {
-            if(certificate.getType().equalsIgnoreCase("x.509"))
+        try {
+            connection.connect(getServer(),getPortNumber());
+            if(password != null)
             {
-                certificates.add((X509Certificate)certificate);
+                try { connection.bind(getUser(),password); }
+                catch (Exception e) { logger.warn("Could not bind while reading server certificate, continuing",e); }
             }
+            SSLSession sslSession = connection.getSSLSession();
+            Certificate[] certs =   sslSession.getPeerCertificates();
+            Set<X509Certificate> certificates = new HashSet<>();
+            for(Certificate certificate: certs)
+            {
+                if(certificate.getType().equalsIgnoreCase("x.509"))
+                {
+                    certificates.add((X509Certificate)certificate);
+                }
+            }
+            return certificates;
         }
-        return certificates;
+        finally {
+            try { connection.close(); } catch (Exception ignore) {}
+        }
     }
 
     public void connect(SecureString password) throws LDAPException, GeneralSecurityException {
-        LDAPConnection c = null;
-        if(UseSSL.get())
-        {
-            if(_config == null || _config.get_keyStore() == null)
-                throw new LDAPException(ResultCode.AUTH_METHOD_NOT_SUPPORTED,"Can not connect with SSL, " +
-                        "no key store provided");
-            SSLSocketFactory sslSocketFactory = getSSLSocketFactory();
-            c = new LDAPConnection(sslSocketFactory);
-        }
-        else
-        {
-            c = new LDAPConnection();
-        }
-        c.connect(Server.get(),getPortNumber());
-
-        BindResult bindResult;
-        if (UseGSSAPI.get()) {
-            GSSAPIBindRequestProperties gssapiProperties = new GSSAPIBindRequestProperties(User.get(), password.toString());
-            GSSAPIBindRequest bindRequest = new GSSAPIBindRequest(gssapiProperties);
-            bindResult = c.bind(bindRequest);
-        } else {
-            bindResult = c.bind(User.get(), password.toString());
-        }
-
-        if(bindResult.getResultCode().equals(ResultCode.SUCCESS))
-        {
-            _rootDSE = c.getRootDSE();
-            if(_rootDSE != null)
-            {
-                _context = _rootDSE.getNamingContextDNs();
-                if(_context != null && _context.length > 0 ) setLdapContext(_context);
-            }
-            Schema schema = c.getSchema();
-            if(schema != null)
-            {
-                Set<AttributeTypeDefinition> attributeTypes = schema.getAttributeTypes();
-                setAttributeDefinition(attributeTypes);
-            }
-            _ldapConnection =  c;
-            SchemaAttributes.addAll(_ldapConnection.getSchema().getAttributeTypes().stream().map(x -> x.getNameOrOID().toLowerCase()).collect(Collectors.toList()));
-            OperationalAttributes.addAll(_ldapConnection.getSchema().getOperationalAttributeTypes().stream().map(x->x.getNameOrOID().toLowerCase()).collect(Collectors.toSet()));
-        }
-        else
-        {
-            c.close();
-        }
+        connectInternal(password == null ? null : password.toString());
     }
 
     public SearchResultEntry getEntry(String dn) throws LDAPException {

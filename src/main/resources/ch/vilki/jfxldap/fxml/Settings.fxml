@@ -106,6 +106,7 @@
                                     <CheckBox fx:id="_checkBoxJNDIReader" mnemonicParsing="false" text="Use JNDI" />
                                     <CheckBox fx:id="_checkBoxReadOnly" mnemonicParsing="false" text="Read Only" />
                                     <CheckBox fx:id="_checkBoxUseSSL" mnemonicParsing="false" text="SSL" />
+                                    <CheckBox fx:id="_checkBoxAcceptAllCertificates" mnemonicParsing="false" text="Accept All Certificates" />
                                     <CheckBox fx:id="_checkBoxUseGSSAPI" mnemonicParsing="false" text="GSS-API" />
                                  </children>
                                  <padding>
@@ -155,6 +156,7 @@
                       <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                       <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                         <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                        <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                      <children>
                         <Label text="BeyondCompare EXE:" />
@@ -174,6 +176,7 @@
                         <Label text="Visual Studio Code:" GridPane.rowIndex="3" />
                         <TextField fx:id="_textFieldVisualCode" GridPane.columnIndex="1" GridPane.rowIndex="3" />
                         <Button fx:id="_buttonSelectVisualCode" mnemonicParsing="false" prefWidth="100.0" text="Select" GridPane.columnIndex="2" GridPane.rowIndex="3" />
+                        <CheckBox fx:id="_checkBoxAutoImportCertificates" mnemonicParsing="false" text="Automatically download and store server certificates in the keystore (SSL)" GridPane.columnIndex="0" GridPane.columnSpan="3" GridPane.rowIndex="4" />
                      </children>
                   </GridPane>
                </children>

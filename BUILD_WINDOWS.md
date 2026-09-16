@@ -18,7 +18,7 @@ This creates a self-contained application with bundled JRE. Users can run it wit
 .\gradlew.bat buildWindowsInstaller
 ```
 
-**Output:** `build/standalone-installer/jfxLDAP-5.0.0.exe`
+**Output:** `build/standalone-installer/jfxLDAP-5.2.1.exe`
 
 This creates a Windows installer that guides users through installation with Start Menu shortcuts.
 
@@ -32,7 +32,7 @@ This creates a Windows installer that guides users through installation with Sta
 
 The project is already configured in `gradle.properties`:
 ```properties
-version = 5.0.0
+version = 5.2.1
 org.gradle.java.home=C:/data/software/openlogic-openjdk-21.0.9+10-windows-x64
 ```
 
@@ -67,7 +67,7 @@ org.gradle.java.home=C:/data/software/openlogic-openjdk-21.0.9+10-windows-x64
 - Add/Remove Programs entry
 - Bundled JRE
 
-**Output location:** `build/standalone-installer/jfxLDAP-5.0.0.exe`
+**Output location:** `build/standalone-installer/jfxLDAP-5.2.1.exe`
 
 **Distribution:**
 - Share the single .exe file
@@ -83,11 +83,11 @@ org.gradle.java.home=C:/data/software/openlogic-openjdk-21.0.9+10-windows-x64
 - Requires Java 21 on target machine
 - Smallest file size
 
-**Output location:** `build/libs/jfxLDAP-5.0.0-all.jar`
+**Output location:** `build/libs/jfxLDAP-5.2.1-all.jar`
 
 **Usage:**
 ```powershell
-java -jar jfxLDAP-5.0.0-all.jar
+java -jar jfxLDAP-5.2.1-all.jar
 ```
 
 ---
@@ -100,7 +100,7 @@ java -jar jfxLDAP-5.0.0-all.jar
 - Includes batch file launcher
 - Requires Java 21 on target machine
 
-**Output location:** `build/distributions/LdapExplorer-5.0.0-windows.zip`
+**Output location:** `build/distributions/LdapExplorer-5.2.1-windows.zip`
 
 ---
 
@@ -125,7 +125,7 @@ java -jar jfxLDAP-5.0.0-all.jar
 ### Change Application Version
 Edit `gradle.properties`:
 ```properties
-version = 5.1.0
+version = 5.2.1
 ```
 
 ### Change Application Icon
@@ -188,7 +188,7 @@ cd build\standalone-exe\jfxLDAP
 ```
 
 ### Test Installer
-1. Double-click `build\standalone-installer\jfxLDAP-5.0.0.exe`
+1. Double-click `build\standalone-installer\jfxLDAP-5.2.1.exe`
 2. Follow installation wizard
 3. Launch from Start Menu or desktop shortcut
 
@@ -273,5 +273,5 @@ For build issues, check:
 ---
 
 **Last Updated:** December 2025  
-**Version:** 5.0.0  
+**Version:** 5.2.1  
 **Maintainer:** Project Team

@@ -353,15 +353,18 @@ tasks.register<Exec>("createStandaloneExe") {
     val jpackagePath = "${System.getProperty("java.home")}/bin/jpackage"
     val appVersion = project.version.toString()
     val appName = "jfxLDAP"
-    val mainJar = "${layout.buildDirectory.get()}/libs/jfxLDAP-${project.version}-all.jar" 
+    val builtJar = "${layout.buildDirectory.get()}/libs/jfxLDAP-${project.version}-all.jar"
     val outputDir = "${layout.buildDirectory.get()}/standalone-exe"
+    // Dedicated staging dir: jpackage copies EVERYTHING from --input, so we must
+    // not point it at build/libs (which may still contain jars from older versions).
+    val stagingDir = "${layout.buildDirectory.get()}/jpackage-input"
     
     commandLine = listOf(
         jpackagePath,
         "--type", "app-image",  // Creates an application directory with bundled JRE
         "--name", appName,
         "--app-version", appVersion,
-        "--input", "${layout.buildDirectory.get()}/libs",
+        "--input", stagingDir,
         "--dest", outputDir,
         "--main-jar", "jfxLDAP-${project.version}-all.jar",
         "--main-class", "ch.vilki.jfxldap.Main",
@@ -372,7 +375,35 @@ tasks.register<Exec>("createStandaloneExe") {
     )
     
     doFirst {
+        // jpackage refuses to overwrite an existing app-image directory,
+        // so always remove a previous build output first.
+        val out = File(outputDir)
+        if (out.exists()) {
+            println("Removing previous output: $outputDir")
+            out.deleteRecursively()
+        }
         mkdir(outputDir)
+
+        // Rebuild the staging dir from scratch so only the current version is packaged.
+        val staging = File(stagingDir)
+        if (staging.exists()) {
+            staging.deleteRecursively()
+        }
+        staging.mkdirs()
+
+        val srcJar = File(builtJar)
+        if (!srcJar.exists()) {
+            throw GradleException("Fat JAR not found: $builtJar - run the fatJar task first")
+        }
+        srcJar.copyTo(File(staging, srcJar.name), overwrite = true)
+        println("Staged ${srcJar.name} for packaging")
+
+        // Keep the optional helper scripts alongside the app image.
+        listOf("jfxldap.bat", "jfxldap.ps1").forEach { helper ->
+            val f = File(projectDir, helper)
+            if (f.exists()) f.copyTo(File(staging, helper), overwrite = true)
+        }
+
         println("Creating standalone executable in $outputDir")
     }
     
@@ -393,13 +424,15 @@ tasks.register<Exec>("createStandaloneInstaller") {
     val appName = "jfxLDAP"
     val mainJar = "${layout.buildDirectory.get()}/libs/jfxLDAP-${project.version}-all.jar" 
     val outputDir = "${layout.buildDirectory.get()}/standalone-installer"
+    // Dedicated staging dir so stale jars from older versions are never bundled.
+    val stagingDir = "${layout.buildDirectory.get()}/jpackage-input-installer"
     
     commandLine = listOf(
         jpackagePath,
         "--type", "exe",         // Creates a Windows installer
         "--name", appName,
         "--app-version", appVersion,
-        "--input", "${layout.buildDirectory.get()}/libs",
+        "--input", stagingDir,
         "--dest", outputDir,
         "--main-jar", "jfxLDAP-${project.version}-all.jar",
         "--main-class", "ch.vilki.jfxldap.Main",
@@ -413,7 +446,33 @@ tasks.register<Exec>("createStandaloneInstaller") {
     )
     
     doFirst {
+        // jpackage refuses to overwrite an existing output, so clean it first.
+        val out = File(outputDir)
+        if (out.exists()) {
+            println("Removing previous output: $outputDir")
+            out.deleteRecursively()
+        }
         mkdir(outputDir)
+
+        // Rebuild the staging dir from scratch so only the current version is packaged.
+        val staging = File(stagingDir)
+        if (staging.exists()) {
+            staging.deleteRecursively()
+        }
+        staging.mkdirs()
+
+        val srcJar = File(mainJar)
+        if (!srcJar.exists()) {
+            throw GradleException("Fat JAR not found: $mainJar - run the fatJar task first")
+        }
+        srcJar.copyTo(File(staging, srcJar.name), overwrite = true)
+        println("Staged ${srcJar.name} for packaging")
+
+        listOf("jfxldap.bat", "jfxldap.ps1").forEach { helper ->
+            val f = File(projectDir, helper)
+            if (f.exists()) f.copyTo(File(staging, helper), overwrite = true)
+        }
+
         println("Creating standalone installer in $outputDir")
     }
     

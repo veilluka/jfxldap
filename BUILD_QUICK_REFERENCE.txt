@@ -15,17 +15,17 @@ Build Standalone Executable (Recommended)
 Build Windows Installer
   .\gradlew.bat buildWindowsInstaller
   
-  Output: build\standalone-installer\jfxLDAP-5.0.0.exe
+  Output: build\standalone-installer\jfxLDAP-5.2.1.exe
   Size: ~220 MB
   Creates: Full Windows installer with Start Menu shortcuts
 
 Build Fat JAR (Requires Java)
   .\gradlew.bat fatJar
   
-  Output: build\libs\jfxLDAP-5.0.0-all.jar
+  Output: build\libs\jfxLDAP-5.2.1-all.jar
   Size: ~80 MB
   Requires: Java 21 installed on target machine
-  Run: java -jar jfxLDAP-5.0.0-all.jar
+  Run: java -jar jfxLDAP-5.2.1-all.jar
 
 
 DEVELOPMENT COMMANDS
@@ -79,5 +79,5 @@ For developer documentation:
   See WARP.md
 
 ═══════════════════════════════════════════════════════════════
-Version 5.0.0 | Last Updated: December 2025
+Version 5.2.1 | Last Updated: December 2025
 ═══════════════════════════════════════════════════════════════

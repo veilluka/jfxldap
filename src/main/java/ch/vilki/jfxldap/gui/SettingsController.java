@@ -106,7 +106,9 @@ public class SettingsController implements ILoader {
     @FXML CheckBox _checkBoxJNDIReader;
     @FXML CheckBox _checkBoxReadOnly;
     @FXML CheckBox _checkBoxUseSSL;
+    @FXML CheckBox _checkBoxAcceptAllCertificates;
     @FXML CheckBox _checkBoxUseGSSAPI;
+    @FXML CheckBox _checkBoxAutoImportCertificates;
 
     @FXML TabPane _tabPane;
     Tab _keyStoreTab = null;
@@ -229,6 +231,10 @@ public class SettingsController implements ILoader {
         _buttonGetCertificatesFromServer.setDisable(true);
         updateAuthModeUi();
         _checkBoxUseGSSAPI.selectedProperty().addListener((obs, oldVal, newVal) -> updateAuthModeUi());
+        _checkBoxAutoImportCertificates.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            if (_main == null) return;
+            _main._configuration.set_autoImportCertificates(newVal);
+        });
     }
 
     /**
@@ -450,64 +456,44 @@ public class SettingsController implements ILoader {
         });
 
         _buttonGetCertificatesFromServer.setOnAction(x -> {
-            if (_textFieldKeystoreFile.getText().isEmpty()) {
+            if (_textFieldKeystoreFile.getText() == null || _textFieldKeystoreFile.getText().isEmpty()) {
                 GuiHelper.ERROR("No keystore", "Select or create keystore first in general settings");
                 return;
             }
             Connection selected = (Connection) _tableViewConnections.getSelectionModel().getSelectedItem();
-            if (selected == null) GuiHelper.ERROR("Failed", "Select connection first");
+            if (selected == null) {
+                GuiHelper.ERROR("Failed", "Select connection first");
+                return;
+            }
             SecureString pass = _main._configuration.getConnectionPassword(selected);
+            String password = pass == null ? "" : pass.toString();
 
             Connection connection = new Connection(_textFieldConnectionName.getText(),
-                    _textFieldServer.getText(), _textFieldPort.getText(), _textFieldUser.getText(), pass.toString(),
+                    _textFieldServer.getText(), _textFieldPort.getText(), _textFieldUser.getText(), password,
                     "","", null);
 
-            Set<X509Certificate> certificates = null;
             try {
-                certificates = connection.getCertificates();
+                Set<X509Certificate> certificates = connection.getCertificates(password);
+                if (certificates == null || certificates.isEmpty()) {
+                    GuiHelper.INFO("Read Certificate", "Did not find any certificate on server");
+                    return;
+                }
+                int added = _main._configuration.addCertificatesToKeyStore(certificates);
+                if (added == 0) {
+                    GuiHelper.INFO("Certificate search", "Found certificates on server, but you have " +
+                            "them allready in the key-store");
+                } else {
+                    GuiHelper.INFO("Certificates imported", added + " certificate(s) were downloaded and stored " +
+                            "in the key-store:\n" + _textFieldKeystoreFile.getText() + "\n\n" +
+                            "The connection can now be used with SSL.");
+                    if (_main._ctManager._keyStoreController != null) {
+                        _main._ctManager._keyStoreController.initWindow();
+                    }
+                }
             } catch (GeneralSecurityException | IOException | LDAPException e) {
                 logger.error("Exception during getting certificate from server", e);
                 GuiHelper.EXCEPTION("Error loading certificate from server", e.getMessage(), e);
-                return;
             }
-            if (certificates == null || certificates.isEmpty()) {
-                GuiHelper.INFO("Read Certificate", "Did not find any certificate on server");
-                return;
-            }
-            Map<String, X509Certificate> foundCertificates = new HashMap<>();
-            List<byte[]> allreadyHasCertificate = new ArrayList<>();
-
-            try {
-                for (Enumeration<String> e = _main._configuration.get_keyStore().aliases(); e.hasMoreElements(); ) {
-                    String name = e.nextElement();
-                    X509Certificate c = (X509Certificate) _main._configuration.get_keyStore().getCertificate(name);
-                    allreadyHasCertificate.add(c.getSignature());
-                }
-            } catch (KeyStoreException e) {
-                logger.error("Error reading certificates", e);
-            }
-
-            for (X509Certificate certificate : certificates) {
-                byte[] sig = certificate.getSignature();
-                boolean found = false;
-                for (byte[] cer : allreadyHasCertificate) {
-                    if (Arrays.equals(cer, sig)) found = true;
-                }
-                if (!found)
-                    foundCertificates.put(certificate.getSubjectX500Principal().getName(), certificate);
-            }
-            if (foundCertificates.isEmpty()) {
-                GuiHelper.INFO("Certificate search", "Found certificates on server, but you have " +
-                        "them allready in the key-store");
-                return;
-            }
-
-            _main._ctManager._keyStoreController.setCertificatesToBeAdded(foundCertificates);
-            //_main._ctManager._keyStoreController.showWindow();
-            _main._ctManager._keyStoreController._buttonClose.setVisible(true);
-            _tabPane.getSelectionModel().select(_keyStoreTab);
-            Main._ctManager._keyStoreController.showWindow();
-
         });
         _buttonExportConnections.setOnAction(x -> {
             FileChooser chooser = new FileChooser();
@@ -557,6 +543,7 @@ public class SettingsController implements ILoader {
                 _passwordFieldConnection.setText(connection.getPassword());
                 _checkBoxJNDIReader.setSelected(connection.isUseJNDI());
                 _checkBoxUseSSL.setSelected(connection.isSSL());
+                _checkBoxAcceptAllCertificates.setSelected(connection.isAcceptAllCertificates());
                 _checkBoxUseGSSAPI.setSelected(connection.isGSSAPI());
                 _checkBoxReadOnly.setSelected(connection.is_readOnly());
                 _textFieldConnectionName.setDisable(false);
@@ -613,6 +600,7 @@ public class SettingsController implements ILoader {
         c.setUseJNDI(_checkBoxJNDIReader.isSelected());
         c.set_readOnly(_checkBoxReadOnly.isSelected());
         c.setSSL(_checkBoxUseSSL.isSelected());
+        c.setAcceptAllCertificates(_checkBoxAcceptAllCertificates.isSelected());
         c.setGSSAPI(_checkBoxUseGSSAPI.isSelected());
         ObservableList<Connection> connections = FXCollections.observableArrayList();
         for (Connection old : _connectionObservableList) {
@@ -680,6 +668,7 @@ public class SettingsController implements ILoader {
         _textFieldVisualCode.setText(_main._configuration.get_visualCodeExe());
         _textFieldTempDirectoryPath.setText(_main._configuration.get_tempDir());
         _textFieldKeystoreFile.setText(_main._configuration.get_keyStoreFile());
+        _checkBoxAutoImportCertificates.setSelected(_main._configuration.is_autoImportCertificates());
         for (String conName : _main._configuration._connections.keySet().stream().sorted().collect(Collectors.toList())) {
             Connection con = _main._configuration._connections.get(conName);
             _connectionObservableList.add(con);

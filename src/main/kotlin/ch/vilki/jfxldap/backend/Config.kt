@@ -17,7 +17,9 @@ import java.security.KeyStoreException
 import java.security.NoSuchAlgorithmException
 import java.security.Security
 import java.security.cert.CertificateException
+import java.security.cert.X509Certificate
 import java.security.spec.InvalidKeySpecException
+import java.util.Base64
 
 class Config {
     @JvmField
@@ -34,6 +36,7 @@ class Config {
     private var _keyStoreFile: String? = null
     private var _keyStore: KeyStore? = null
     private var _keyStorePassword: SecureString? = null
+    private var _autoImportCertificates = false
 
     fun is_configSecured(): Boolean {
         return _configSecured
@@ -41,6 +44,64 @@ class Config {
 
     fun get_keyStore(): KeyStore? {
         return _keyStore
+    }
+
+    /**
+     * When enabled the application will try to download the server certificate and store it in the
+     * configured keystore automatically if an SSL connection fails because the certificate is not
+     * trusted yet.
+     */
+    fun is_autoImportCertificates(): Boolean {
+        return _autoImportCertificates
+    }
+
+    fun set_autoImportCertificates(autoImport: Boolean) {
+        _autoImportCertificates = autoImport
+        try {
+            _secStorage!!.addUnsecuredProperty("general@@_autoImportCertificates", autoImport.toString())
+        } catch (e: Exception) {
+            logger.error("Error adding property", e)
+        }
+    }
+
+    /**
+     * Adds the provided certificates to the configured keystore, skipping ones that are already
+     * present (compared by their encoded content) and persists the keystore file afterwards.
+     *
+     * @return the number of certificates that were newly added
+     */
+    @Throws(
+        KeyStoreException::class,
+        CertificateException::class,
+        NoSuchAlgorithmException::class,
+        IOException::class
+    )
+    fun addCertificatesToKeyStore(certificates: Set<X509Certificate>): Int {
+        val keyStore = _keyStore ?: return 0
+        val existing = HashSet<String>()
+        val aliases = keyStore.aliases()
+        while (aliases.hasMoreElements()) {
+            val alias = aliases.nextElement()
+            val cert = keyStore.getCertificate(alias)
+            if (cert != null) existing.add(Base64.getEncoder().encodeToString(cert.encoded))
+        }
+        var added = 0
+        for (certificate in certificates) {
+            val fingerprint = Base64.getEncoder().encodeToString(certificate.encoded)
+            if (existing.contains(fingerprint)) continue
+            val baseAlias = certificate.subjectX500Principal.name
+            var alias = baseAlias
+            var counter = 1
+            while (keyStore.containsAlias(alias)) {
+                alias = "$baseAlias#$counter"
+                counter++
+            }
+            keyStore.setCertificateEntry(alias, certificate)
+            existing.add(fingerprint)
+            added++
+        }
+        if (added > 0) saveKeyStoreFile()
+        return added
     }
 
     fun get_tempDir(): String? {
@@ -158,6 +219,9 @@ class Config {
             _configSecured = true
         }
         readConnections()
+        _autoImportCertificates =
+            _secStorage!!.getPropStringValue("general@@_autoImportCertificates")?.equals("true", ignoreCase = true)
+                ?: false
         _keyStoreFile = _secStorage!!.getPropStringValue("general@@_keystorefile")
         if(_keyStoreFile==null) return "keystore file not set"
         if(!Files.exists(Paths.get(_keyStoreFile))){
@@ -229,6 +293,9 @@ class Config {
         if (masterPassword == null || masterPassword._value == null) {
             _secStorage = SecStorage.open_SecuredStorage(fileName, false)
             readConnections()
+            _autoImportCertificates =
+                _secStorage!!.getPropStringValue("general@@_autoImportCertificates")?.equals("true", ignoreCase = true)
+                    ?: false
             return null
         }
         _secStorage = SecStorage.open_SecuredStorage(fileName, masterPassword)
@@ -271,6 +338,8 @@ class Config {
                 true else connection.is_readOnly = false
             if (map["ssl"] != null && map["ssl"].equals("true", ignoreCase = true)) connection.isSSL =
                 true else connection.isSSL = false
+            if (map["acceptall"] != null && map["acceptall"].equals("true", ignoreCase = true)) connection.isAcceptAllCertificates =
+                true else connection.isAcceptAllCertificates = false
             if (map["gssapi"] != null && map["gssapi"].equals("true", ignoreCase = true)) connection.isGSSAPI =
                 true else connection.isGSSAPI = false
             _connections[connection.name] = connection
@@ -295,6 +364,7 @@ class Config {
                 _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
                 _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
                 _secStorage!!.addUnsecuredProperty(label + "ssl", con.isSSL.toString())
+                _secStorage!!.addUnsecuredProperty(label + "acceptall", con.isAcceptAllCertificates.toString())
                 _secStorage!!.addUnsecuredProperty(label + "gssapi", con.isGSSAPI.toString())
                 _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
             }
@@ -324,6 +394,7 @@ class Config {
         _secStorage!!.addUnsecuredProperty(label + "usejndi", con.isUseJNDI.toString())
         _secStorage!!.addUnsecuredProperty(label + "readonly", con.is_readOnly.toString())
         _secStorage!!.addUnsecuredProperty(label + "ssl", con.isSSL.toString())
+        _secStorage!!.addUnsecuredProperty(label + "acceptall", con.isAcceptAllCertificates.toString())
         _secStorage!!.addUnsecuredProperty(label + "gssapi", con.isGSSAPI.toString())
         _secStorage!!.addUnsecuredProperty(label + "tag", con.tag)
     }
